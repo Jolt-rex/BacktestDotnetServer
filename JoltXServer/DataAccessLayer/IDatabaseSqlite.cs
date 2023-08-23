@@ -8,5 +8,7 @@ public interface IDatabaseSqlite
 
     public Task<List<Symbol>> GetAllSymbols();
 
+    public Task<Symbol> GetSymbolById(int id);
+
     public Task<int> CreateSymbol(Symbol symbol);
 }

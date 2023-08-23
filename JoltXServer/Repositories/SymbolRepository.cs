@@ -18,7 +18,10 @@ public class SymbolRepository : ISymbolRepository
     }
 
     // // GetById
-    // public Task<Symbol> GetById(int id);
+    public async Task<Symbol> GetById(int id)
+    {
+        return await DbConnection.GetSymbolById(id);
+    }
 
     // CreateNew
     public async Task<int> CreateNew(Symbol symbol)

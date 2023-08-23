@@ -13,7 +13,7 @@ public class SymbolController : ControllerBase
     private readonly ISymbolRepository _symbolRepository;
     public SymbolController(ISymbolRepository symbolRepository)
     {
-        this._symbolRepository = symbolRepository;
+        _symbolRepository = symbolRepository;
     }
 
     [HttpGet("all")]
@@ -28,6 +28,22 @@ public class SymbolController : ControllerBase
         return Ok(symbols);
     }
 
+    [HttpGet("{id:int}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<Symbol>> GetSymbolById(int id)
+    {
+        if(id <= 0) return BadRequest();
+
+        Symbol symbol = await _symbolRepository.GetById(id);
+
+        if(symbol.SymbolId == -1) return NotFound();
+
+        return Ok(symbol);
+    }
+
+
     [HttpPost("new")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status208AlreadyReported)]
@@ -38,7 +54,6 @@ public class SymbolController : ControllerBase
         if(count == 0) return StatusCodes.Status208AlreadyReported;
 
         return Ok(count);
-
     }
 
 }

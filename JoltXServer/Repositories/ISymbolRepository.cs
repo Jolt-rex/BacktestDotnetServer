@@ -1,4 +1,5 @@
 using JoltXServer.Models;
+using JoltXServer.DataAccessLayer;
 
 namespace JoltXServer.Repository;
 
@@ -9,7 +10,7 @@ public interface ISymbolRepository
     public Task<List<Symbol>> GetAll();
 
     // GetById
-    // public Task<Symbol> GetById(int id);
+    public Task<Symbol> GetById(int id);
 
     // CreateNew
     public Task<int> CreateNew(Symbol symbol);

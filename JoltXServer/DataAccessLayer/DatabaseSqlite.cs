@@ -108,22 +108,54 @@ public class DatabaseSqlite : IDatabaseSqlite{
         if(Connection == null) throw new Exception("Unable to connect to database");
 
         List<Symbol> symbols = new();
-        var command = Connection.CreateCommand();
-        command.CommandText = "SELECT * FROM symbols";
 
-        using (var reader = await command.ExecuteReaderAsync())
+        using (var command = Connection.CreateCommand())
         {
+            command.CommandText = "SELECT * FROM symbols";
+
+            var reader = await command.ExecuteReaderAsync();
+            
             while(reader.Read())
             {
-                Symbol symbol = new();
-                symbol.SymbolId = reader.GetInt32(0);
-                symbol.Name = reader.GetString(1);
-                symbol.IsActive = reader.GetInt32(2) == 1; // converts int to bool as SQlite has no bool type
-                symbol.StrategyCount = reader.GetInt32(3);
+                Symbol symbol = new()
+                {
+                    SymbolId = reader.GetInt32(0),
+                    Name = reader.GetString(1),
+                    IsActive = reader.GetInt32(2) == 1, // converts int to bool as SQlite has no bool type
+                    StrategyCount = reader.GetInt32(3)
+                };
                 symbols.Add(symbol);
             }
         }
+        
         return symbols;
+    }
+
+    public async Task<Symbol> GetSymbolById(int id)
+    {
+        if(Connection == null || Connection.State == ConnectionState.Closed || Connection.State == ConnectionState.Broken)
+            await Connect();
+
+        if(Connection == null) throw new Exception("Unable to connect to database");
+
+        using (var command = Connection.CreateCommand())
+        {
+            command.CommandText = $""" SELECT * FROM symbols WHERE symbol_id = {id}""";
+
+            var reader = await command.ExecuteReaderAsync();
+            if(!reader.Read())
+                return new Symbol { SymbolId = -1 };
+
+            Symbol symbol = new()
+                {
+                    SymbolId = reader.GetInt32(0),
+                    Name = reader.GetString(1),
+                    IsActive = reader.GetInt32(2) == 1, // converts int to bool as SQlite has no bool type
+                    StrategyCount = reader.GetInt32(3)
+                };
+
+            return symbol;
+        }
     }
 
     public async Task<int> CreateSymbol(Symbol symbol)
