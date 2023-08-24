@@ -7,51 +7,51 @@ using System.Data;
 public class DatabaseSqlite : IDatabaseSqlite{
 
     private static readonly string PathToDB = Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile) + "\\.JoltXServer\\db\\cryptocurrencies.sqlite";
-    private SqliteConnection? Connection;
+    private readonly SqliteConnection Connection;
     
-    public DatabaseSqlite(bool resetDatabase = false)
+    public DatabaseSqlite()
     {
-        Console.WriteLine($"Startup database {PathToDB}");
-        Startup(resetDatabase);
+            Console.WriteLine($"Startup database {PathToDB}");
+            Connection = new SqliteConnection($"Data Source={PathToDB}");
+            Startup();
     }
 
     ~DatabaseSqlite()
     {
-        Connection?.Close();
+        Connection.Close();
     }
 
-    public async void Startup(bool resetDatabase)
+    public async void Startup()
     {
-        await Connect();
-        if(resetDatabase)
-        {
+        try {
+            await Connect();
             await EnableWAL();
-            await CreateInitialTablesQuery();
+            await CreateInitialTablesIfNotExist();
+        } catch (Exception ex)
+        {
+            Console.WriteLine($"Exception raised attempting database startup: {ex.Message}");
         }
     }
 
     public async Task Connect()
     {
-        Connection = new SqliteConnection($"Data Source={PathToDB}");
         await Connection.OpenAsync();
     }
 
-    private async Task CreateInitialTablesQuery()
+    private async Task CheckConnection()
     {
-        Console.WriteLine("Creating new tables for db");
-        if(Connection == null || Connection.State == ConnectionState.Closed || Connection.State == ConnectionState.Broken)
+        if(Connection.State == ConnectionState.Closed || Connection.State == ConnectionState.Broken)
             await Connect();
+    }
 
-        if(Connection == null) throw new Exception("Unable to connect to database");
+    private async Task CreateInitialTablesIfNotExist()
+    {
+        await CheckConnection();
         
         var command = Connection.CreateCommand();
         command.CommandText =
             """
                 PRAGMA foreign_keys = ON;
-    
-                DROP TABLE IF EXISTS users;
-                DROP TABLE IF EXISTS symbols;
-                DROP TABLE IF EXISTS strategies;
             
                 CREATE TABLE IF NOT EXISTS users
                 (user_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -89,7 +89,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
     // Enable Write Ahead Log - improves write performance
     private async Task EnableWAL()
     {
-        if(Connection == null) throw new Exception("Database connection unavailable");
+        await CheckConnection();
 
         var command = Connection.CreateCommand();
         command.CommandText =  
@@ -100,43 +100,44 @@ public class DatabaseSqlite : IDatabaseSqlite{
         await command.ExecuteNonQueryAsync();
     }
 
-    public async Task<List<Symbol>> GetAllSymbols()
+
+    public async Task<List<Symbol>?> GetAllSymbols()
     {
-        if(Connection == null || Connection.State == ConnectionState.Closed || Connection.State == ConnectionState.Broken)
-            await Connect();
+        try {
+            await CheckConnection();
 
-        if(Connection == null) throw new Exception("Unable to connect to database");
+            List<Symbol> symbols = new();
 
-        List<Symbol> symbols = new();
-
-        using (var command = Connection.CreateCommand())
-        {
-            command.CommandText = "SELECT * FROM symbols";
-
-            var reader = await command.ExecuteReaderAsync();
-            
-            while(reader.Read())
+            using (var command = Connection.CreateCommand())
             {
-                Symbol symbol = new()
+                command.CommandText = "SELECT * FROM symbols";
+
+                var reader = await command.ExecuteReaderAsync();
+                
+                while(reader.Read())
                 {
-                    SymbolId = reader.GetInt32(0),
-                    Name = reader.GetString(1),
-                    IsActive = reader.GetInt32(2) == 1, // converts int to bool as SQlite has no bool type
-                    StrategyCount = reader.GetInt32(3)
-                };
-                symbols.Add(symbol);
+                    Symbol symbol = new()
+                    {
+                        SymbolId = reader.GetInt32(0),
+                        Name = reader.GetString(1),
+                        IsActive = reader.GetInt32(2) == 1, // converts int to bool as SQlite has no bool type
+                        StrategyCount = reader.GetInt32(3)
+                    };
+                    symbols.Add(symbol);
+                }
             }
+            
+            return symbols;
+        } catch (Exception ex)
+        {
+            Console.WriteLine($"Exception occurred: {ex.Message}");
+            return null;
         }
-        
-        return symbols;
     }
 
     public async Task<Symbol> GetSymbolById(int id)
     {
-        if(Connection == null || Connection.State == ConnectionState.Closed || Connection.State == ConnectionState.Broken)
-            await Connect();
-
-        if(Connection == null) throw new Exception("Unable to connect to database");
+        await CheckConnection();
 
         using (var command = Connection.CreateCommand())
         {
@@ -162,10 +163,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
     {
         if(!Symbol.Validate(symbol)) return -1;
 
-        if(Connection == null || Connection.State == ConnectionState.Closed || Connection.State == ConnectionState.Broken)
-            await Connect();
-
-        if(Connection == null) throw new Exception("Unable to connect to database");
+        await CheckConnection();
         
         using (var command = Connection.CreateCommand())
         {

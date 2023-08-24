@@ -12,7 +12,7 @@ public class SymbolRepository : ISymbolRepository
     {
         DbConnection = dbConnection;
     }
-    public async Task<List<Symbol>> GetAll()
+    public async Task<List<Symbol>?> GetAll()
     {
         return await DbConnection.GetAllSymbols();
     }

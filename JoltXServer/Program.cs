@@ -7,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
-builder.Services.AddSingleton<IDatabaseSqlite>(new DatabaseSqlite(false));
+builder.Services.AddSingleton<IDatabaseSqlite>(new DatabaseSqlite());
 builder.Services.AddSingleton<ISymbolRepository, SymbolRepository>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();

@@ -19,7 +19,7 @@ public class SymbolController : ControllerBase
     [HttpGet("all")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<List<Symbol>>> GetAllSymbols()
+    public async Task<ActionResult<List<Symbol>?>> GetAllSymbols()
     {
         List<Symbol> symbols = await _symbolRepository.GetAll();
 

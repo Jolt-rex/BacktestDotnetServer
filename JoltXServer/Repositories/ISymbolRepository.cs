@@ -7,7 +7,7 @@ namespace JoltXServer.Repository;
 public interface ISymbolRepository
 {
     // GetAll
-    public Task<List<Symbol>> GetAll();
+    public Task<List<Symbol>?> GetAll();
 
     // GetById
     public Task<Symbol> GetById(int id);

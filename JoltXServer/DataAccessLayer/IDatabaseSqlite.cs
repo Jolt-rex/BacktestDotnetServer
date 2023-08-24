@@ -6,7 +6,7 @@ public interface IDatabaseSqlite
 {
     public Task Connect();
 
-    public Task<List<Symbol>> GetAllSymbols();
+    public Task<List<Symbol>?> GetAllSymbols();
 
     public Task<Symbol> GetSymbolById(int id);
 
