@@ -58,26 +58,36 @@ public class DatabaseSqlite : IDatabaseSqlite{
                 username VARCHAR(64) UNIQUE,
                 email VARCHAR(1024) UNIQUE,
                 password VARCHAR(64),
-                isAdmin INTEGER);
+                is_admin INTEGER);
 
                 CREATE TABLE IF NOT EXISTS symbols
                 (symbol_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name VARCHAR(10) UNIQUE,
-                isActive INTEGER,
-                strategyCount INTEGER);
+                is_active INTEGER,
+                strategy_count INTEGER,
+                popularity INTEGER,
+                symbol_type_id INTEGER NOT NULL,
+                FOREIGN KEY (symbol_type_id)
+                    REFERENCES symbol_types(symbol_type_id));
 
-        
+                CREATE TABLE IF NOT EXISTS symbol_types
+                (symbol_type_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name VARCHAR(14) UNIQUE);
+
+                INSERT INTO symbol_types (name)
+                VALUES ('Cryptocurrency'), ('Forex'), ('Stocks'), ('ETF');
+
                 CREATE TABLE IF NOT EXISTS strategies
                 (strategy_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name VARCHAR(64),
-                longStrategy VARCHAR(1024),
-                shortStrategy VARCHAR(1024),
-                shortingEnabled INTEGER,
-                isPublic INTEGER,
+                long_strategy VARCHAR(1024),
+                short_strategy VARCHAR(1024),
+                shorting_enabled INTEGER,
+                is_public INTEGER,
                 rank INTEGER,
                 score INTEGER,
-                bestReturn REAL,
-                bestReturnSymbol VARCHAR(10),
+                best_return REAL,
+                best_return_symbol VARCHAR(10),
                 user_id INTEGER NOT NULL,
                 FOREIGN KEY (user_id)
                     REFERENCES users(user_id));
@@ -121,7 +131,9 @@ public class DatabaseSqlite : IDatabaseSqlite{
                         SymbolId = reader.GetInt32(0),
                         Name = reader.GetString(1),
                         IsActive = reader.GetInt32(2) == 1, // converts int to bool as SQlite has no bool type
-                        StrategyCount = reader.GetInt32(3)
+                        StrategyCount = reader.GetInt32(3),
+                        Populartiy = reader.GetInt32(4),
+                        SymbolTypeId = reader.GetInt32(5)
                     };
                     symbols.Add(symbol);
                 }
@@ -133,6 +145,39 @@ public class DatabaseSqlite : IDatabaseSqlite{
             Console.WriteLine($"Exception occurred: {ex.Message}");
             return null;
         }
+    }
+
+    public async Task<List<SymbolType>?> GetAllSymbolTypes()
+    {
+        try
+        {
+            await CheckConnection();
+
+            List<SymbolType> symbolTypes = new();
+
+            using (var command = Connection.CreateCommand())
+            {
+                command.CommandText = """SELECT * FROM symbol_types""";
+                var reader = await command.ExecuteReaderAsync();
+
+                while(reader.Read())
+                {
+                    SymbolType symbolType = new()
+                    {
+                        SymbolTypeId = reader.GetInt32(0),
+                        Name = reader.GetString(1),
+                    };
+                    symbolTypes.Add(symbolType);
+                }
+            }
+            return symbolTypes;
+
+        } catch (Exception ex)
+        {
+            Console.WriteLine($"Exception raised attempting to retrieve symbol types from database: {ex.Message}");
+            return null;
+        }
+
     }
 
     public async Task<Symbol> GetSymbolById(int id)
@@ -152,7 +197,9 @@ public class DatabaseSqlite : IDatabaseSqlite{
                     SymbolId = reader.GetInt32(0),
                     Name = reader.GetString(1),
                     IsActive = reader.GetInt32(2) == 1, // converts int to bool as SQlite has no bool type
-                    StrategyCount = reader.GetInt32(3)
+                    StrategyCount = reader.GetInt32(3),
+                    Populartiy = reader.GetInt32(4),
+                    SymbolTypeId = reader.GetInt32(5)
                 };
 
             return symbol;
@@ -170,12 +217,32 @@ public class DatabaseSqlite : IDatabaseSqlite{
             // TODO check that name has not already been used
             command.CommandText =
                 $"""
-                    INSERT INTO symbols (name, isActive, strategyCount)
-                    VALUES ('{symbol.Name}', {symbol.IsActive}, {symbol.StrategyCount});
+                    INSERT INTO symbols (name, is_active, strategy_count, popularity, symbol_type_id)
+                    VALUES ('{symbol.Name}', {symbol.IsActive}, {symbol.StrategyCount}, 0, {symbol.SymbolTypeId});
                 """;
 
             return await command.ExecuteNonQueryAsync();  
         }
+    }
+
+    public async Task<int> UpdateSymbolById(Symbol symbol)
+    {
+        if(!Symbol.Validate(symbol)) return -1;
+
+        await CheckConnection();
+
+        using (var command = Connection.CreateCommand())
+        {
+            command.CommandText = 
+            $"""
+                UPDATE symbols 
+                SET name='{symbol.Name}', is_active={(symbol.IsActive ? 1 : 0)}, strategy_count={symbol.StrategyCount}, popularity={symbol.Populartiy}, symbol_type_id={symbol.SymbolTypeId}
+                WHERE symbol_id = {symbol.SymbolId}
+            """;
+
+            return await command.ExecuteNonQueryAsync();
+        }
+
     }
 
 }

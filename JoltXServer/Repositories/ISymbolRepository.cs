@@ -8,6 +8,8 @@ public interface ISymbolRepository
 {
     // GetAll
     public Task<List<Symbol>?> GetAll();
+    
+    public Task<List<SymbolType>?> GetAllTypes();
 
     // GetById
     public Task<Symbol> GetById(int id);
@@ -16,7 +18,7 @@ public interface ISymbolRepository
     public Task<int> CreateNew(Symbol symbol);
 
     // // UpdateById
-    // public Task<int> UpdateById(int id, Symbol symbol);
+    public Task<int> UpdateById(Symbol symbol);
 
     // // DeleteById
     // public Task<int> DeleteById(int id);
