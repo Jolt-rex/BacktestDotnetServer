@@ -4,7 +4,7 @@ using Newtonsoft.Json.Linq;
 namespace JoltXServer.Models;
 
 
-// JSON serialiser / deserialser for candle data from BinanceAPI
+// JSON serialiser / deserialser for candle data for transfer
 // Binance GET request for historical kline data returns an 
 // array of klines (candles), each kline is a mixed type array
 // so we must use a serialiser to convert to a list of structs

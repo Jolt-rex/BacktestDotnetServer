@@ -28,6 +28,11 @@ public class SymbolRepository : ISymbolRepository
         return await DbConnection.GetSymbolById(id);
     }
 
+    public async Task<Symbol> GetByName(string name)
+    {
+        return await DbConnection.GetSymbolByName(name);
+    }
+
     // CreateNew
     public async Task<int> CreateNew(Symbol symbol)
     {

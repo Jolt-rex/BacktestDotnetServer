@@ -206,6 +206,32 @@ public class DatabaseSqlite : IDatabaseSqlite{
         }
     }
 
+    public async Task<Symbol> GetSymbolByName(string name)
+    {
+        await CheckConnection();
+
+        using (var command = Connection.CreateCommand())
+        {
+            command.CommandText = $""" SELECT * FROM symbols WHERE name = '{name}'""";
+
+            var reader = await command.ExecuteReaderAsync();
+            if(!reader.Read())
+                return new Symbol { SymbolId = -1 };
+
+            Symbol symbol = new()
+                {
+                    SymbolId = reader.GetInt32(0),
+                    Name = reader.GetString(1),
+                    IsActive = reader.GetInt32(2) == 1, // converts int to bool as SQlite has no bool type
+                    StrategyCount = reader.GetInt32(3),
+                    Populartiy = reader.GetInt32(4),
+                    SymbolTypeId = reader.GetInt32(5)
+                };
+
+            return symbol;
+        }
+    }
+
     public async Task<int> CreateSymbol(Symbol symbol)
     {
         if(!Symbol.Validate(symbol)) return -1;
@@ -242,7 +268,6 @@ public class DatabaseSqlite : IDatabaseSqlite{
 
             return await command.ExecuteNonQueryAsync();
         }
-
     }
 
 }

@@ -8,11 +8,12 @@ public interface ISymbolRepository
 {
     // GetAll
     public Task<List<Symbol>?> GetAll();
-    
+
     public Task<List<SymbolType>?> GetAllTypes();
 
     // GetById
     public Task<Symbol> GetById(int id);
+    public Task<Symbol> GetByName(string name);
 
     // CreateNew
     public Task<int> CreateNew(Symbol symbol);
