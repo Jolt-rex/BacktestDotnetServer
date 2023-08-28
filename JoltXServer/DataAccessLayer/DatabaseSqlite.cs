@@ -2,7 +2,9 @@ namespace JoltXServer.DataAccessLayer;
 
 using JoltXServer.Models;
 using Microsoft.Data.Sqlite;
+using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 
 public class DatabaseSqlite : IDatabaseSqlite{
 
@@ -268,6 +270,53 @@ public class DatabaseSqlite : IDatabaseSqlite{
 
             return await command.ExecuteNonQueryAsync();
         }
+    }
+
+    public async Task<bool> CheckTableExists(string tableName)
+    {
+        await CheckConnection();
+
+        using(var command = Connection.CreateCommand())
+        {
+            command.CommandText = 
+            $"""
+                SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='{tableName}')
+            """;
+
+            int result = await command.ExecuteNonQueryAsync();
+
+            return result == 1;
+        }
+    }
+
+    public async Task CreateCandleTable(string symbolName)
+    {
+        await CheckConnection();
+
+        using(var command = Connection.CreateCommand())
+        {
+            command.CommandText =
+            $"""
+                CREATE TABLE IF NOT EXISTS {symbolName}
+                (time INTEGER PRIMARY KEY,
+                open VARCHAR(20),
+                high VARCHAR(20),
+                low VARCHAR(20),
+                close VARCHAR(20),
+                volume INTEGER); 
+            """;
+
+            await command.ExecuteNonQueryAsync();
+        }
+    }
+
+    public async Task<int> InsertCandles(string symbolNameAndTime, Candles[] candles)
+    {
+        
+    }
+    public async Task<long> GetEarliestCandleTime(string symbolName)
+    {
+
     }
 
 }
