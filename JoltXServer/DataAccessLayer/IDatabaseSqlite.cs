@@ -13,4 +13,6 @@ public interface IDatabaseSqlite
     public Task<Symbol> GetSymbolByName(string name);
     public Task<int> CreateSymbol(Symbol symbol);
     public Task<int> UpdateSymbolById(Symbol symbol);
+    public Task InsertCandles(string symbolNameAndTime, List<Candle> candles);
+    public Task<long> GetEarliestCandleTime(string symbolName);
 }

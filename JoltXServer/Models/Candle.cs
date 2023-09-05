@@ -20,6 +20,29 @@ public struct Candle
     public decimal Volume { get; set; }
 };
 
+// Received char interval as either 'h' hour or 'm' minute, and validates the time
+// between each candle matches this interval
+// returns true if time series has a consistent interval
+// returns false if candles[] is empty
+public static class CandleTimeSeriesValidator
+{
+    public static bool Validate(char interval, List<Candle> candles)
+    {
+        int intervalInSeconds = interval == 'h' ? 3600 : 60;
+        long previousTime = candles[0].Time;
+
+        for(int i = 1; i < candles.Count; i++)
+        {
+            if(previousTime + intervalInSeconds != candles[i].Time)
+                return false;
+
+            previousTime = candles[i].Time;
+        }
+
+        return candles.Count >= 1;
+    }
+}
+
 public class CandleConverter : JsonConverter
 {
     public override bool CanConvert(Type objectType)

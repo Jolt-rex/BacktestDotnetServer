@@ -1,5 +1,4 @@
 using JoltXServer.Models;
-using JoltXServer.DataAccessLayer;
 
 namespace JoltXServer.Repository;
 

@@ -10,6 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddSingleton<IDatabaseSqlite>(new DatabaseSqlite());
 builder.Services.AddSingleton<ISymbolRepository, SymbolRepository>();
+builder.Services.AddSingleton<IBinanceService, BinanceService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

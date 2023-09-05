@@ -2,9 +2,7 @@ namespace JoltXServer.DataAccessLayer;
 
 using JoltXServer.Models;
 using Microsoft.Data.Sqlite;
-using System.ComponentModel;
 using System.Data;
-using System.Diagnostics;
 
 public class DatabaseSqlite : IDatabaseSqlite{
 
@@ -310,13 +308,68 @@ public class DatabaseSqlite : IDatabaseSqlite{
         }
     }
 
-    public async Task<int> InsertCandles(string symbolNameAndTime, Candles[] candles)
+    // Symbol name and time is of the format 'ETHBTCh' 'ETHBTCm' the last char is the
+    // time interval, hours or minutes
+    public async Task InsertCandles(string symbolNameAndTime, List<Candle> candles)
     {
-        
+        // validate time series data
+        if(!CandleTimeSeriesValidator.Validate(symbolNameAndTime[^1], candles))
+            return;
+
+        await CheckConnection();
+
+        using(var transaction = Connection.BeginTransaction())
+        {
+            try
+            {
+                for(int i = 0; i < candles.Count; i++)
+                {
+                    using(var command = Connection.CreateCommand())
+                    {
+                        command.CommandText = 
+                        $"""
+                            INSERT INTO {symbolNameAndTime} (time,open,high,low,close,volume) 
+                            VALUES ({candles[i].Time}, '{candles[i].Open}', '{candles[i].High}', '{candles[i].Low}', '{candles[i].Close}', {candles[i].Volume});
+                        """;
+                        await command.ExecuteNonQueryAsync();
+                    }
+                }
+                await transaction.CommitAsync();
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                Console.Error.WriteLine($"Candle data not added to database: exception occurred: {ex}");
+            }
+        }
     }
+
+    // returns earliest candle open time in database for given symbol
+    // if table does not exist, table will be created and return 0
+    // if table is empty we return 0
     public async Task<long> GetEarliestCandleTime(string symbolName)
     {
+        await CheckConnection();
 
+        if(! await CheckTableExists(symbolName))
+        {
+            Console.WriteLine($"Table {symbolName} does not exist. Creating table");
+            await CreateCandleTable(symbolName);
+            return 0;
+        }
+
+        using(var command = Connection.CreateCommand())
+        {
+            command.CommandText =
+            $"""
+                SELECT 'time' FROM {symbolName} LIMIT 1
+            """;
+
+            var reader = await command.ExecuteReaderAsync();
+            if(!reader.Read())
+                return 0;
+
+            return reader.GetInt64(0);
+        }
     }
-
 }
