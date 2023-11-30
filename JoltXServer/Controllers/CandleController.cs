@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json.Linq;
 using JoltXServer.Services;
+using JoltXServer.Repositories;
 using JoltXServer.DataAccessLayer;
 using JoltXServer.Models;
+using System.Linq.Expressions;
 
 namespace Jolt_X.Controllers;
 
@@ -9,14 +12,20 @@ namespace Jolt_X.Controllers;
 [Route("api/v1/candles")]
 public class CandleController : ControllerBase
 {
-    private DatabaseSqlite? DbSqlite;
-    public CandleController(DatabaseSqlite dbSqlite)
+    private IDatabaseSqlite _dbConnection;
+    private ICandleRepository _candleRepository;
+    private ISymbolRepository _symbolRepository;
+
+
+    public CandleController(IDatabaseSqlite dbConnection, ISymbolRepository symbolRepository, ICandleRepository candleRepository)
     {
-        DbSqlite = dbSqlite;
+        _dbConnection = dbConnection;
+        _symbolRepository = symbolRepository;
+        _candleRepository = candleRepository;
     }
 
 
-    [HttpGet("{symbol}/{interval:int}/{startTime:long}/{endTime:long}")]
+    [HttpGet("{symbol}/{interval}/{startTime:long}/{endTime:long}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<string[]>> GetCandles(string symbol, long startTime, long endTime)
@@ -31,7 +40,23 @@ public class CandleController : ControllerBase
         return Ok(candles);
     }
 
+    [HttpPost("loadHistoricalCandles/{symbol}")]
+    public async Task<IActionResult> LoadHistoricalCandles(string symbol, [FromBody] Dictionary<string, string> data)
+    {
+        char interval = char.Parse(data["interval"]);
+
+        if(!Symbol.ValidateName(symbol)) return BadRequest("Symbol is not valid");
+
+        Symbol existingSymbol = await _symbolRepository.GetByName(symbol.Name);
+        if(existingSymbol.SymbolId != -1) return BadRequest("Symbol already exists with that name");
+
+        int count = await _symbolRepository.CreateNew(symbol);
+        return Ok(count);
+    }
+
 }
+
+
 
 // {
 //     [ApiController]

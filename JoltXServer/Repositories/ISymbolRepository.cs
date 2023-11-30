@@ -1,6 +1,6 @@
 using JoltXServer.Models;
 
-namespace JoltXServer.Repository;
+namespace JoltXServer.Repositories;
 
 
 public interface ISymbolRepository

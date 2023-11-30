@@ -1,48 +1,48 @@
 using JoltXServer.DataAccessLayer;
 using JoltXServer.Models;
-using JoltXServer.Repository;
+using JoltXServer.Repositories;
 
 namespace JoltXServer.Repository;
 
 public class SymbolRepository : ISymbolRepository
 {
-    private readonly IDatabaseSqlite DbConnection;
+    private readonly IDatabaseSqlite _dbConnection;
 
     public SymbolRepository(IDatabaseSqlite dbConnection)
     {
-        DbConnection = dbConnection;
+        _dbConnection = dbConnection;
     }
     public async Task<List<Symbol>?> GetAll()
     {
-        return await DbConnection.GetAllSymbols();
+        return await _dbConnection.GetAllSymbols();
     }
 
     public async Task<List<SymbolType>?> GetAllTypes()
     {
-        return await DbConnection.GetAllSymbolTypes();
+        return await _dbConnection.GetAllSymbolTypes();
     }
 
     // // GetById
     public async Task<Symbol> GetById(int id)
     {
-        return await DbConnection.GetSymbolById(id);
+        return await _dbConnection.GetSymbolById(id);
     }
 
     public async Task<Symbol> GetByName(string name)
     {
-        return await DbConnection.GetSymbolByName(name);
+        return await _dbConnection.GetSymbolByName(name);
     }
 
     // CreateNew
     public async Task<int> CreateNew(Symbol symbol)
     {
-        return await DbConnection.CreateSymbol(symbol);
+        return await _dbConnection.CreateSymbol(symbol);
     }
 
     // UpdateById
     public async Task<int> UpdateById(Symbol symbol)
     {
-        return await DbConnection.UpdateSymbolById(symbol);
+        return await _dbConnection.UpdateSymbolById(symbol);
     }
 
     // // DeleteById

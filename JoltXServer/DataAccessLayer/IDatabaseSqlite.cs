@@ -6,6 +6,7 @@ public interface IDatabaseSqlite
 {
     public Task Connect();
 
+    // SYMBOLS 
     public Task<List<Symbol>?> GetAllSymbols();
     public Task<List<SymbolType>?> GetAllSymbolTypes();
 
@@ -13,6 +14,10 @@ public interface IDatabaseSqlite
     public Task<Symbol> GetSymbolByName(string name);
     public Task<int> CreateSymbol(Symbol symbol);
     public Task<int> UpdateSymbolById(Symbol symbol);
+    // END SYMBOLS
+
+    // CANDLES
     public Task InsertCandles(string symbolNameAndTime, List<Candle> candles);
     public Task<long> GetEarliestCandleTime(string symbolName);
+    // END CANDLES
 }

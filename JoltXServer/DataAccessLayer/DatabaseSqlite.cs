@@ -6,19 +6,19 @@ using System.Data;
 
 public class DatabaseSqlite : IDatabaseSqlite{
 
-    private static readonly string PathToDB = Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile) + "\\.JoltXServer\\db\\cryptocurrencies.sqlite";
-    private readonly SqliteConnection Connection;
+    private static readonly string _pathToDB = Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile) + "\\.JoltXServer\\db\\cryptocurrencies.sqlite";
+    private readonly SqliteConnection _connection;
     
     public DatabaseSqlite()
     {
-            Console.WriteLine($"Startup database {PathToDB}");
-            Connection = new SqliteConnection($"Data Source={PathToDB}");
+            Console.WriteLine($"Startup database {_pathToDB}");
+            _connection = new SqliteConnection($"Data Source={_pathToDB}");
             Startup();
     }
 
     ~DatabaseSqlite()
     {
-        Connection.Close();
+        _connection.Close();
     }
 
     public async void Startup()
@@ -35,12 +35,12 @@ public class DatabaseSqlite : IDatabaseSqlite{
 
     public async Task Connect()
     {
-        await Connection.OpenAsync();
+        await _connection.OpenAsync();
     }
 
     private async Task CheckConnection()
     {
-        if(Connection.State == ConnectionState.Closed || Connection.State == ConnectionState.Broken)
+        if(_connection.State == ConnectionState.Closed || _connection.State == ConnectionState.Broken)
             await Connect();
     }
 
@@ -48,7 +48,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
     {
         await CheckConnection();
         
-        var command = Connection.CreateCommand();
+        var command = _connection.CreateCommand();
         command.CommandText =
             """
                 PRAGMA foreign_keys = ON;
@@ -101,7 +101,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
     {
         await CheckConnection();
 
-        var command = Connection.CreateCommand();
+        var command = _connection.CreateCommand();
         command.CommandText =  
             @"
                 PRAGMA journal_mode = 'wal'
@@ -118,7 +118,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
 
             List<Symbol> symbols = new();
 
-            using (var command = Connection.CreateCommand())
+            using (var command = _connection.CreateCommand())
             {
                 command.CommandText = "SELECT * FROM symbols";
 
@@ -155,7 +155,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
 
             List<SymbolType> symbolTypes = new();
 
-            using (var command = Connection.CreateCommand())
+            using (var command = _connection.CreateCommand())
             {
                 command.CommandText = """SELECT * FROM symbol_types""";
                 var reader = await command.ExecuteReaderAsync();
@@ -184,7 +184,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
     {
         await CheckConnection();
 
-        using (var command = Connection.CreateCommand())
+        using (var command = _connection.CreateCommand())
         {
             command.CommandText = $""" SELECT * FROM symbols WHERE symbol_id = {id}""";
 
@@ -210,7 +210,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
     {
         await CheckConnection();
 
-        using (var command = Connection.CreateCommand())
+        using (var command = _connection.CreateCommand())
         {
             command.CommandText = $""" SELECT * FROM symbols WHERE name = '{name}'""";
 
@@ -238,7 +238,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
 
         await CheckConnection();
         
-        using (var command = Connection.CreateCommand())
+        using (var command = _connection.CreateCommand())
         {
             // TODO check that name has not already been used
             command.CommandText =
@@ -257,7 +257,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
 
         await CheckConnection();
 
-        using (var command = Connection.CreateCommand())
+        using (var command = _connection.CreateCommand())
         {
             command.CommandText = 
             $"""
@@ -274,7 +274,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
     {
         await CheckConnection();
 
-        using(var command = Connection.CreateCommand())
+        using(var command = _connection.CreateCommand())
         {
             command.CommandText = 
             $"""
@@ -291,7 +291,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
     {
         await CheckConnection();
 
-        using(var command = Connection.CreateCommand())
+        using(var command = _connection.CreateCommand())
         {
             command.CommandText =
             $"""
@@ -318,13 +318,13 @@ public class DatabaseSqlite : IDatabaseSqlite{
 
         await CheckConnection();
 
-        using(var transaction = Connection.BeginTransaction())
+        using(var transaction = _connection.BeginTransaction())
         {
             try
             {
                 for(int i = 0; i < candles.Count; i++)
                 {
-                    using(var command = Connection.CreateCommand())
+                    using(var command = _connection.CreateCommand())
                     {
                         command.CommandText = 
                         $"""
@@ -358,7 +358,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
             return 0;
         }
 
-        using(var command = Connection.CreateCommand())
+        using(var command = _connection.CreateCommand())
         {
             command.CommandText =
             $"""

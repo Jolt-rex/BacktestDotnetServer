@@ -1,8 +1,9 @@
-namespace JoltXServer.Services;
 
 using Newtonsoft.Json;
 using JoltXServer.Models;
 using JoltXServer.DataAccessLayer;
+
+namespace JoltXServer.Services;
 
 public class BinanceService : IBinanceService
 {
@@ -55,6 +56,9 @@ public class BinanceService : IBinanceService
         
         // else make request directly
         var candles = await GetCandlesAsync(symbol, startTime, endTime);
+
+        if(candles == null) return 0;
+        
         await DbConnection.InsertCandles(symbol, candles);
 
         return candles.Count;

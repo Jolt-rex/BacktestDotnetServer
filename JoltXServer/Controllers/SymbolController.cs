@@ -1,7 +1,7 @@
 
 
 using Microsoft.AspNetCore.Mvc;
-using JoltXServer.Repository;
+using JoltXServer.Repositories;
 using JoltXServer.Models;
 
 namespace JoltXServer.Controllers;
