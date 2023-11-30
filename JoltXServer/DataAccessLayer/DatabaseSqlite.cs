@@ -372,4 +372,47 @@ public class DatabaseSqlite : IDatabaseSqlite{
             return reader.GetInt64(0);
         }
     }
+
+    public async Task<List<Candle>?> GetCandles(string symbol, char interval, long startTime, long endTime)
+    {
+        await CheckConnection();
+
+        string symbolAndInterval = symbol + interval;
+
+        if(! await CheckTableExists(symbolAndInterval))
+        {
+            Console.WriteLine($"Table {symbolAndInterval} does not exist.");
+            return null;
+        }
+
+        List<Candle> candles = new();
+
+        using(var command = _connection.CreateCommand())
+        {
+            command.CommandText =
+            $"""
+                SELECT * FROM {symbolAndInterval}
+                WHERE time >= {startTime}
+                AND time <= {endTime} 
+            """;
+
+            var reader = await command.ExecuteReaderAsync();
+
+            while(reader.Read())
+            {
+                Candle candle = new()
+                {
+                    Time = reader.GetInt64(0),
+                    Open = reader.GetDecimal(1),
+                    High = reader.GetDecimal(2),
+                    Low = reader.GetDecimal(3),
+                    Close = reader.GetDecimal(4),
+                    Volume = reader.GetDecimal(5)
+                };
+                candles.Add(candle);
+            }
+        }
+
+        return candles;
+    }
 }

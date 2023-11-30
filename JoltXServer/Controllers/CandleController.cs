@@ -12,14 +12,12 @@ namespace Jolt_X.Controllers;
 [Route("api/v1/candles")]
 public class CandleController : ControllerBase
 {
-    private IDatabaseSqlite _dbConnection;
     private ICandleRepository _candleRepository;
     private ISymbolRepository _symbolRepository;
 
 
     public CandleController(IDatabaseSqlite dbConnection, ISymbolRepository symbolRepository, ICandleRepository candleRepository)
     {
-        _dbConnection = dbConnection;
         _symbolRepository = symbolRepository;
         _candleRepository = candleRepository;
     }
@@ -30,12 +28,7 @@ public class CandleController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<string[]>> GetCandles(string symbol, long startTime, long endTime)
     {
-        string[] candles = new string[2] { "BTCUSDT", "ETHLINK" };
-
-        // TODO add await stuff
-
-        // access database and retrieve candles async
-        
+        var candles = await _candleRepository.GetCandlesAsync(symbol, 'm', startTime, endTime);
 
         return Ok(candles);
     }
@@ -47,11 +40,11 @@ public class CandleController : ControllerBase
 
         if(!Symbol.ValidateName(symbol)) return BadRequest("Symbol is not valid");
 
-        Symbol existingSymbol = await _symbolRepository.GetByName(symbol.Name);
+        Symbol existingSymbol = await _symbolRepository.GetByName(symbol);
         if(existingSymbol.SymbolId != -1) return BadRequest("Symbol already exists with that name");
 
-        int count = await _symbolRepository.CreateNew(symbol);
-        return Ok(count);
+        //int count = await _symbolRepository.CreateNew(symbol);
+        return Ok();
     }
 
 }

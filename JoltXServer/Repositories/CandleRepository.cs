@@ -12,10 +12,9 @@ public class CandleRepository : ICandleRepository
         _dbConnection = dbConnection;
     }
 
-    public async Task<List<Candle>?> GetCandlesAsync(string symbol, long startTime = 0, long endTime = 0)
+    public async Task<List<Candle>?> GetCandlesAsync(string symbol, char interval, long startTime = 0, long endTime = 0)
     {
-        _dbConnection.GetCandles
-
+        return await _dbConnection.GetCandles(symbol, interval, startTime, endTime);
 
     }
 }
