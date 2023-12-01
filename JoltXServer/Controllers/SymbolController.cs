@@ -68,6 +68,9 @@ public class SymbolController : ControllerBase
     {
         if(!Symbol.Validate(symbol)) return BadRequest("Symbol is not valid");
 
+        if(symbol.Name == null)
+            return BadRequest("Symbol name is null");
+
         Symbol existingSymbol = await _symbolRepository.GetByName(symbol.Name);
         if(existingSymbol.SymbolId != -1) return BadRequest("Symbol already exists with that name");
 

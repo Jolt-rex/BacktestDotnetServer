@@ -1,6 +1,6 @@
 using System.Data.Common;
 using JoltXServer.DataAccessLayer;
-using JoltXServer.Repository;
+using JoltXServer.Repositories;
 using JoltXServer.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,7 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddSingleton<IDatabaseSqlite>(new DatabaseSqlite());
 builder.Services.AddSingleton<ISymbolRepository, SymbolRepository>();
-builder.Services.AddSingleton<IBinanceService, BinanceService>();
+builder.Services.AddSingleton<IExternalAPIService, BinanceService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 

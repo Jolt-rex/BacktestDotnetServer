@@ -2,7 +2,7 @@ namespace JoltXServer.Services;
 
 using JoltXServer.Models;
 
-public interface IBinanceService
+public interface IExternalAPIService
 {
      public Task<List<Candle>?> GetCandlesAsync(string symbol, long startTime = 0, long endTime = 0);
 

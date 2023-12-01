@@ -5,7 +5,7 @@ using JoltXServer.DataAccessLayer;
 
 namespace JoltXServer.Services;
 
-public class BinanceService : IBinanceService
+public class BinanceService : IExternalAPIService
 {
     private static readonly string BinanceUrl = "https://api3.binance.com/api/v3/";
     private readonly IDatabaseSqlite DbConnection;

@@ -1,8 +1,7 @@
 using JoltXServer.DataAccessLayer;
 using JoltXServer.Models;
-using JoltXServer.Repositories;
 
-namespace JoltXServer.Repository;
+namespace JoltXServer.Repositories;
 
 public class SymbolRepository : ISymbolRepository
 {

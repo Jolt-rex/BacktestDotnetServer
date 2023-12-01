@@ -14,12 +14,14 @@ public class CandleController : ControllerBase
 {
     private ICandleRepository _candleRepository;
     private ISymbolRepository _symbolRepository;
+    private IExternalAPIService _binanceService;
 
 
-    public CandleController(IDatabaseSqlite dbConnection, ISymbolRepository symbolRepository, ICandleRepository candleRepository)
+    public CandleController(ISymbolRepository symbolRepository, ICandleRepository candleRepository, IExternalAPIService binanceService)
     {
         _symbolRepository = symbolRepository;
         _candleRepository = candleRepository;
+        _binanceService = binanceService;
     }
 
 
