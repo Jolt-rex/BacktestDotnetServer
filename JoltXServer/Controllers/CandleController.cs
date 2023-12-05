@@ -25,27 +25,31 @@ public class CandleController : ControllerBase
     }
 
 
+    // TODO setup intervals 1M 5M 15M 30M 1H 2H 4H 6H 8H 12H 1D 1W 
     [HttpGet("{symbol}/{interval}/{startTime:long}/{endTime:long}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<string[]>> GetCandles(string symbol, long startTime, long endTime)
+    public async Task<ActionResult<string[]>> GetCandles(string symbol, string interval, long startTime, long endTime)
     {
         var candles = await _candleRepository.GetCandlesAsync(symbol, 'm', startTime, endTime);
 
         return Ok(candles);
     }
 
-    [HttpPost("loadHistoricalCandles/{symbol}")]
-    public async Task<IActionResult> LoadHistoricalCandles(string symbol, [FromBody] Dictionary<string, string> data)
+    // Creates request to BinanceService to retrieve 1min candles from last candle in database 
+    // up until current time. If candles do not exist yet for current symbol, request will
+    // obtain candles from 1year previous, which may take some time to process the requests
+    // function then updates the 1 hour candles in the repository (database)
+    [HttpPost("requestCandleUpdate/{symbol}")]
+    public async Task<IActionResult> LoadHistoricalCandles(string symbol)
     {
-        char interval = char.Parse(data["interval"]);
-
         if(!Symbol.ValidateName(symbol)) return BadRequest("Symbol is not valid");
 
         Symbol existingSymbol = await _symbolRepository.GetByName(symbol);
-        if(existingSymbol.SymbolId != -1) return BadRequest("Symbol already exists with that name");
+        if(existingSymbol.SymbolId == -1) return BadRequest("Symbol not found");
 
-        //int count = await _symbolRepository.CreateNew(symbol);
+        
+
         return Ok();
     }
 

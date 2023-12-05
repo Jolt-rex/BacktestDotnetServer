@@ -17,9 +17,7 @@ public class BinanceService : IExternalAPIService
 
     public async Task<List<Candle>?> GetCandlesAsync(string symbol, long startTime = 0, long endTime = 0)
     {
-        char interval = symbol[^1];
-        symbol = symbol.Remove(symbol.Length - 1, 1);
-        string requestUrl = BinanceUrl + $"klines?symbol={symbol}&interval=1{interval}&limit=1000";
+        string requestUrl = BinanceUrl + $"klines?symbol={symbol}&interval=1m&limit=1000";
         if(startTime > 0) requestUrl += $"&startTime={startTime}";
         if(endTime > 0) requestUrl += $"&endTime={endTime}";
 
@@ -36,9 +34,19 @@ public class BinanceService : IExternalAPIService
         return candleSticks;
     }
 
+    public async Task<List<Candle>> GetCandlesGeneratorAsync(string symbol, long startTime, long endTime = 0)
+    {
+        string requestUrl = BinanceUrl + $"klines?symbol={symbol}&interval=1m";
+
+        HttpClient client = new();
+        HttpResponseMessage response = await client.GetAsync(requestUrl);
+
+        
+    }
+
     // gets earlier candles from startTime and ends at either current time, or the 
     // first time already in the database
-    public async Task<int> FetchAndSaveEarlierCandles(string symbol, long startTime)
+    public async Task<int> FetchHistoricalCandles(string symbol, long startTime)
     {
         int interval = symbol[^1] == 'h' ? 3600 : 60;
         long endTime = await DbConnection.GetEarliestCandleTime(symbol);
