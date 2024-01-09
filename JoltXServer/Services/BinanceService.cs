@@ -7,17 +7,28 @@ namespace JoltXServer.Services;
 
 public class BinanceService : IExternalAPIService
 {
-    private static readonly string BinanceUrl = "https://api3.binance.com/api/v3/";
-    private readonly IDatabaseSqlite DbConnection;
+    private static readonly int SECONDS_IN_HOUR = 3600;
+    private static readonly int SECONDS_IN_MINUTE = 60;
+
+    // TODO update this limit rate from API regularly
+    private static int BinanceCandleLimitPerRequest = 1500;
+
+    private static readonly string BinanceUrl = "https://api3.binance.com/api/v3";
+    // `${klineEndpoint}?symbol=${s}&interval=${timeFrame}&limit=${API_KLINE_LIMIT}`
+    // `&startTime=${startTime.toString()}&endTime=${endTime}
+    private static readonly string BinanceWebSocketUrl = "wss://stream.binance.com:9443/stream?streams=";
+    // wss://stream.binance.com:9443/stream?streams=ethbtc@kline1m/linkusdt@kline1m
+    private readonly IDatabaseSqlite _dbConnection;
+
 
     public BinanceService(IDatabaseSqlite dbSqlite)
     {
-        DbConnection = dbSqlite;
+        _dbConnection = dbSqlite;
     }
 
     public async Task<List<Candle>?> GetCandlesAsync(string symbol, long startTime = 0, long endTime = 0)
     {
-        string requestUrl = BinanceUrl + $"klines?symbol={symbol}&interval=1m&limit=1000";
+        string requestUrl = BinanceUrl + $"/klines?symbol={symbol}&interval=1m&limit={BinanceCandleLimitPerRequest}";
         if(startTime > 0) requestUrl += $"&startTime={startTime}";
         if(endTime > 0) requestUrl += $"&endTime={endTime}";
 
@@ -41,15 +52,16 @@ public class BinanceService : IExternalAPIService
         HttpClient client = new();
         HttpResponseMessage response = await client.GetAsync(requestUrl);
 
-        
+        // TODO
+        return new List<Candle>();
     }
 
     // gets earlier candles from startTime and ends at either current time, or the 
     // first time already in the database
     public async Task<int> FetchHistoricalCandles(string symbol, long startTime)
     {
-        int interval = symbol[^1] == 'h' ? 3600 : 60;
-        long endTime = await DbConnection.GetEarliestCandleTime(symbol);
+        int interval = symbol[^1] == 'h' ? SECONDS_IN_HOUR : SECONDS_IN_MINUTE;
+        long endTime = await _dbConnection.GetEarliestCandleTime(symbol);
 
         // if there are no current candles in database, set endTime to now
         // otherwise, subtract interval time to get previous candle endTime
@@ -67,10 +79,14 @@ public class BinanceService : IExternalAPIService
 
         if(candles == null) return 0;
         
-        await DbConnection.InsertCandles(symbol, candles);
+        await _dbConnection.InsertCandles(symbol, candles);
 
         return candles.Count;
     }
+
+    // websocket
+
+    
     
 }
 
