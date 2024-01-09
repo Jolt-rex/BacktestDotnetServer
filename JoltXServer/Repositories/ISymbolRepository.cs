@@ -20,6 +20,8 @@ public interface ISymbolRepository
     // // UpdateById
     public Task<int> UpdateById(Symbol symbol);
 
+    public Task<int> ActivateById(int id);
+
     // // DeleteById
     // public Task<int> DeleteById(int id);
 

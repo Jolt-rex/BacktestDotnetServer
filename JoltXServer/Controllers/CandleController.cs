@@ -48,7 +48,7 @@ public class CandleController : ControllerBase
         Symbol existingSymbol = await _symbolRepository.GetByName(symbol);
         if(existingSymbol.SymbolId == -1) return BadRequest("Symbol not found");
 
-        
+        var candles = await _binanceService.
 
         return Ok();
     }
