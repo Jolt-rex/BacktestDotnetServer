@@ -270,13 +270,13 @@ public class DatabaseSqlite : IDatabaseSqlite{
         }
     }
 
-    public async Task<int> ActivateSymbolById(int id)
+    public async Task<int> ActivateSymbolByName(string name)
     {
         await CheckConnection();
 
         using (var command = _connection.CreateCommand())
         {
-            command.CommandText = $"""UPDATE symbols SET is_active={true} WHERE symbol_id = {id}""";
+            command.CommandText = $"""UPDATE symbols SET is_active={true} WHERE symbol_name = {name}""";
 
             return await command.ExecuteNonQueryAsync();
         }

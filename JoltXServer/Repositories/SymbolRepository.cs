@@ -44,9 +44,9 @@ public class SymbolRepository : ISymbolRepository
         return await _dbConnection.UpdateSymbolById(symbol);
     }
 
-    public async Task<int> ActivateById(int id)
+    public async Task<int> ActivateByName(string name)
     {
-        return await _dbConnection.ActivateSymbolById(id);
+        return await _dbConnection.ActivateSymbolByName(name);
     }
 
     // // DeleteById

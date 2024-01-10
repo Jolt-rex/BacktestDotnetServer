@@ -9,14 +9,15 @@ public class BinanceService : IExternalAPIService
 {
     private static readonly int SECONDS_IN_HOUR = 3600;
     private static readonly int SECONDS_IN_MINUTE = 60;
-
     // TODO update this limit rate from API regularly
-    private static int BinanceCandleLimitPerRequest = 1500;
+    private static int _binanceCandleLimitPerRequest = 1500;
 
-    private static readonly string BinanceUrl = "https://api3.binance.com/api/v3";
+    private static readonly IDictionary<string, int> _lastCandleTime = new Dictionary<string, int>();
+
+    private static readonly string _binanceUrl = "https://api3.binance.com/api/v3";
     // `${klineEndpoint}?symbol=${s}&interval=${timeFrame}&limit=${API_KLINE_LIMIT}`
     // `&startTime=${startTime.toString()}&endTime=${endTime}
-    private static readonly string BinanceWebSocketUrl = "wss://stream.binance.com:9443/stream?streams=";
+    private static string _binanceWebSocketUrl = "wss://stream.binance.com:9443/stream?streams=";
     // wss://stream.binance.com:9443/stream?streams=ethbtc@kline1m/linkusdt@kline1m
     private readonly IDatabaseSqlite _dbConnection;
 
@@ -26,9 +27,25 @@ public class BinanceService : IExternalAPIService
         _dbConnection = dbSqlite;
     }
 
+    // add candles to websocket, and retrieve past 1 year of historical candles
+    public async Task<int> ActivateSymbols(string[] symbols)
+    {
+        int i = 0;
+        for(; i < symbols.Length; i++)
+        {
+
+            _lastCandleTime.Add(symbols[i], 0);
+            if(_binanceWebSocketUrl[^1] != '=') _binanceWebSocketUrl += '/';
+            _binanceWebSocketUrl += $"{symbols[i]}@kline1m";
+        }
+        await RestartWebSocket();
+
+        return i;
+    }
+
     public async Task<List<Candle>?> GetCandlesAsync(string symbol, long startTime = 0, long endTime = 0)
     {
-        string requestUrl = BinanceUrl + $"/klines?symbol={symbol}&interval=1m&limit={BinanceCandleLimitPerRequest}";
+        string requestUrl = _binanceUrl + $"/klines?symbol={symbol}&interval=1m&limit={_binanceCandleLimitPerRequest}";
         if(startTime > 0) requestUrl += $"&startTime={startTime}";
         if(endTime > 0) requestUrl += $"&endTime={endTime}";
 
@@ -47,7 +64,7 @@ public class BinanceService : IExternalAPIService
 
     public async Task<List<Candle>> GetCandlesGeneratorAsync(string symbol, long startTime, long endTime = 0)
     {
-        string requestUrl = BinanceUrl + $"klines?symbol={symbol}&interval=1m";
+        string requestUrl = _binanceUrl + $"klines?symbol={symbol}&interval=1m";
 
         HttpClient client = new();
         HttpResponseMessage response = await client.GetAsync(requestUrl);
@@ -70,7 +87,7 @@ public class BinanceService : IExternalAPIService
 
         if((endTime - startTime) / interval > 1000)
         {
-            // use generator as request limit is 1000 TODO
+            // use generator as request limit is 1500 TODO
             return -1;
         }
         
@@ -85,8 +102,12 @@ public class BinanceService : IExternalAPIService
     }
 
     // websocket
+    // SELECT id FROM table ORDER BY id DESC LIMIT 0,1 - to get row with highest id
 
-    
+    private void RestartWebSocket()
+    {
+
+    }
     
 }
 
