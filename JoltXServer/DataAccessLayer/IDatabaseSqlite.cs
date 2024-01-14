@@ -14,11 +14,11 @@ public interface IDatabaseSqlite
     public Task<Symbol> GetSymbolByName(string name);
     public Task<int> CreateSymbol(Symbol symbol);
     public Task<int> UpdateSymbolById(Symbol symbol);
-    public Task<int> ActivateSymbolById(int id);
+    public Task<int> ActivateSymbolByName(string name);
     // END SYMBOLS
 
     // CANDLES
-    public Task InsertCandles(string symbolNameAndTime, List<Candle> candles);
+    public Task<int> InsertCandles(string symbolNameAndTime, List<Candle> candles);
     public Task<long> GetEarliestCandleTime(string symbolName);
     public Task<List<Candle>?> GetCandles(string symbol, char interval, long startTime, long endTime);
     // END CANDLES

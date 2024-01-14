@@ -322,19 +322,20 @@ public class DatabaseSqlite : IDatabaseSqlite{
 
     // Symbol name and time is of the format 'ETHBTCh' 'ETHBTCm' the last char is the
     // time interval, hours or minutes
-    public async Task InsertCandles(string symbolNameAndTime, List<Candle> candles)
+    public async Task<int> InsertCandles(string symbolNameAndTime, List<Candle> candles)
     {
         // validate time series data
         if(!CandleTimeSeriesValidator.Validate(symbolNameAndTime[^1], candles))
-            return;
+            return -1;
 
         await CheckConnection();
 
+        int i = 0;
         using(var transaction = _connection.BeginTransaction())
         {
             try
             {
-                for(int i = 0; i < candles.Count; i++)
+                for(; i < candles.Count; i++)
                 {
                     using(var command = _connection.CreateCommand())
                     {
@@ -347,6 +348,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
                     }
                 }
                 await transaction.CommitAsync();
+
             }
             catch (Exception ex)
             {
@@ -354,6 +356,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
                 Console.Error.WriteLine($"Candle data not added to database: exception occurred: {ex}");
             }
         }
+        return i;
     }
 
     // returns earliest candle open time in database for given symbol

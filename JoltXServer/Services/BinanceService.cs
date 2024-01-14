@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using JoltXServer.Models;
 using JoltXServer.DataAccessLayer;
+using JoltXServer.Repositories;
 
 namespace JoltXServer.Services;
 
@@ -19,28 +20,37 @@ public class BinanceService : IExternalAPIService
     // `&startTime=${startTime.toString()}&endTime=${endTime}
     private static string _binanceWebSocketUrl = "wss://stream.binance.com:9443/stream?streams=";
     // wss://stream.binance.com:9443/stream?streams=ethbtc@kline1m/linkusdt@kline1m
-    private readonly IDatabaseSqlite _dbConnection;
+    private readonly ISymbolRepository _symbolRepository;
+    private readonly ICandleRepository _candleRepository;
 
 
-    public BinanceService(IDatabaseSqlite dbSqlite)
+    public BinanceService(ISymbolRepository symbolRepository, ICandleRepository candleRepository)
     {
-        _dbConnection = dbSqlite;
+        _symbolRepository = symbolRepository;
+        _candleRepository = candleRepository;
     }
 
-    // add candles to websocket, and retrieve past 1 year of historical candles
-    public async Task<int> ActivateSymbols(string[] symbols)
+    // add candles to websocket
+    // retrieve most recent candles and add to repo
+    // restart websocket
+    public async Task<int> PreloadSymbol(string symbol)
     {
-        int i = 0;
-        for(; i < symbols.Length; i++)
-        {
 
-            _lastCandleTime.Add(symbols[i], 0);
-            if(_binanceWebSocketUrl[^1] != '=') _binanceWebSocketUrl += '/';
-            _binanceWebSocketUrl += $"{symbols[i]}@kline1m";
-        }
-        await RestartWebSocket();
+        _lastCandleTime.Add(symbol, 0);
 
-        return i;
+        if(_binanceWebSocketUrl[^1] != '=') _binanceWebSocketUrl += '/';
+        _binanceWebSocketUrl += $"{symbol}@kline1m";
+
+        List<Candle>? previousCandles = await GetCandlesAsync(symbol);
+
+        if(previousCandles == null || previousCandles.Count == 0)
+            return -1;
+
+        int count = await _candleRepository.InsertCandles(symbol + 'c', previousCandles);
+        
+        RestartWebSocket();
+
+        return count;
     }
 
     public async Task<List<Candle>?> GetCandlesAsync(string symbol, long startTime = 0, long endTime = 0)
@@ -77,34 +87,35 @@ public class BinanceService : IExternalAPIService
     // first time already in the database
     public async Task<int> FetchHistoricalCandles(string symbol, long startTime)
     {
-        int interval = symbol[^1] == 'h' ? SECONDS_IN_HOUR : SECONDS_IN_MINUTE;
-        long endTime = await _dbConnection.GetEarliestCandleTime(symbol);
+        return 1;
+        // int interval = symbol[^1] == 'h' ? SECONDS_IN_HOUR : SECONDS_IN_MINUTE;
+        // long endTime = await _dbConnection.GetEarliestCandleTime(symbol);
 
-        // if there are no current candles in database, set endTime to now
-        // otherwise, subtract interval time to get previous candle endTime
-        if(endTime == 0) endTime = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
-        else endTime -= interval;
+        // // if there are no current candles in database, set endTime to now
+        // // otherwise, subtract interval time to get previous candle endTime
+        // if(endTime == 0) endTime = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
+        // else endTime -= interval;
 
-        if((endTime - startTime) / interval > 1000)
-        {
-            // use generator as request limit is 1500 TODO
-            return -1;
-        }
+        // if((endTime - startTime) / interval > _binanceCandleLimitPerRequest)
+        // {
+        //     // use generator as request limit is 1500 TODO
+        //     return -1;
+        // }
         
-        // else make request directly
-        var candles = await GetCandlesAsync(symbol, startTime, endTime);
+        // // else make request directly
+        // var candles = await GetCandlesAsync(symbol, startTime, endTime);
 
-        if(candles == null) return 0;
+        // if(candles == null) return 0;
         
-        await _dbConnection.InsertCandles(symbol, candles);
+        // await _dbConnection.InsertCandles(symbol, candles);
 
-        return candles.Count;
+        // return candles.Count;
     }
 
     // websocket
     // SELECT id FROM table ORDER BY id DESC LIMIT 0,1 - to get row with highest id
 
-    private void RestartWebSocket()
+    private async void RestartWebSocket()
     {
 
     }

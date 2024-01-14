@@ -14,6 +14,10 @@ public class CandleRepository : ICandleRepository
     public async Task<List<Candle>?> GetCandlesAsync(string symbol, char interval, long startTime = 0, long endTime = 0)
     {
         return await _dbConnection.GetCandles(symbol, interval, startTime, endTime);
+    }
 
+    public async Task<int> InsertCandles(string symbolNameAndTime, List<Candle> candles)
+    {
+        return await _dbConnection.InsertCandles(symbolNameAndTime, candles);
     }
 }
