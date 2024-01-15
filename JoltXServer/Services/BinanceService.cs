@@ -4,6 +4,8 @@ using JoltXServer.Models;
 using JoltXServer.DataAccessLayer;
 using JoltXServer.Repositories;
 using System.Net.WebSockets;
+using Microsoft.VisualBasic;
+using System.Text;
 
 namespace JoltXServer.Services;
 
@@ -14,12 +16,12 @@ public class BinanceService : IExternalAPIService
     // TODO update this limit rate from API regularly
     private static int _binanceCandleLimitPerRequest = 1500;
 
-    private static readonly IDictionary<string, long> _lastCandleTime = new Dictionary<string, long>();
+    private static readonly IDictionary<string, long> _activeSymbols = new Dictionary<string, long>();
 
     private static readonly string _binanceUrl = "https://api3.binance.com/api/v3";
     // `${klineEndpoint}?symbol=${s}&interval=${timeFrame}&limit=${API_KLINE_LIMIT}`
     // `&startTime=${startTime.toString()}&endTime=${endTime}
-    private static string _binanceWebSocketUrl = "wss://stream.binance.com:9443/stream?streams=";
+    private static string _binanceWebSocketUrl = "wss://stream.binance.com:9443/stream?streams=btcusdt@kline1m";
     // wss://stream.binance.com:9443/stream?streams=ethbtc@kline1m/linkusdt@kline1m
     private static ClientWebSocket _ws;
     private readonly ISymbolRepository _symbolRepository;
@@ -30,7 +32,7 @@ public class BinanceService : IExternalAPIService
     {
         _symbolRepository = symbolRepository;
         _candleRepository = candleRepository;
-        _ws = new ClientWebSocket();
+        RestartWebSocket();        
     }
 
     // add candles to websocket
@@ -39,7 +41,7 @@ public class BinanceService : IExternalAPIService
     public async Task<int> PreloadSymbol(string symbol)
     {
 
-        _lastCandleTime.Add(symbol, 0);
+        _activeSymbols.Add(symbol, 0);
 
         if(_binanceWebSocketUrl[^1] != '=') _binanceWebSocketUrl += '/';
         _binanceWebSocketUrl += $"{symbol}@kline1m";
@@ -51,7 +53,7 @@ public class BinanceService : IExternalAPIService
 
         int count = await _candleRepository.InsertCandles(symbol + 'c', previousCandles);
 
-        _lastCandleTime[symbol] = previousCandles[^1].Time;
+        _activeSymbols[symbol] = previousCandles[^1].Time;
         
         RestartWebSocket();
 
@@ -120,22 +122,38 @@ public class BinanceService : IExternalAPIService
     // websocket
     // SELECT id FROM table ORDER BY id DESC LIMIT 0,1 - to get row with highest id
 
+
     private async void RestartWebSocket()
     {
+        _ws?.Dispose();
+
+        _ws = new ClientWebSocket();
         Uri serviceUri = new Uri(_binanceWebSocketUrl);
-        CancellationToken cts = new CancellationToken();
+        
+        var receiveTask = Task.Run(async () =>
+        {
+            var buffer = new byte[1024 * 4];
+            while(true)
+            {
+                var result = await _ws.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                if(result.MessageType == WebSocketMessageType.Close) break;
+
+                var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                Console.WriteLine("Received: " + message);
+            }
+        });
+
         try
         {
-            await _ws.ConnectAsync(serviceUri, cts);
-
-
-
+            await _ws.ConnectAsync(serviceUri, CancellationToken.None);
+            await receiveTask;
         }
         catch (WebSocketException ex)
         {
             Console.WriteLine(ex.Message);
         }
     }
+
     
 }
 
