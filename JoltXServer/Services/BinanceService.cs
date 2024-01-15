@@ -30,6 +30,7 @@ public class BinanceService : IExternalAPIService
 
     public BinanceService(ISymbolRepository symbolRepository, ICandleRepository candleRepository)
     {
+        Console.WriteLine("Creating BinanceService object");
         _symbolRepository = symbolRepository;
         _candleRepository = candleRepository;
         RestartWebSocket();        
@@ -130,22 +131,23 @@ public class BinanceService : IExternalAPIService
         _ws = new ClientWebSocket();
         Uri serviceUri = new Uri(_binanceWebSocketUrl);
         
-        var receiveTask = Task.Run(async () =>
-        {
-            var buffer = new byte[1024 * 4];
-            while(true)
-            {
-                var result = await _ws.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-                if(result.MessageType == WebSocketMessageType.Close) break;
-
-                var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                Console.WriteLine("Received: " + message);
-            }
-        });
-
         try
         {
             await _ws.ConnectAsync(serviceUri, CancellationToken.None);
+        
+            var receiveTask = Task.Run(async () =>
+            {
+                var buffer = new byte[1024 * 4];
+                while(true)
+                {
+                    var result = await _ws.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    if(result.MessageType == WebSocketMessageType.Close) break;
+
+                    var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                    Console.WriteLine("Received: " + message);
+                }
+            });
+
             await receiveTask;
         }
         catch (WebSocketException ex)

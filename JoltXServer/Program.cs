@@ -10,11 +10,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddSingleton<IDatabaseSqlite>(new DatabaseSqlite());
 builder.Services.AddSingleton<ISymbolRepository, SymbolRepository>();
+builder.Services.AddSingleton<ICandleRepository, CandleRepository>();
 builder.Services.AddSingleton<IExternalAPIService, BinanceService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+app.Services.GetService<IExternalAPIService>();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
