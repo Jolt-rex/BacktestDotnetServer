@@ -24,6 +24,8 @@ public class BinanceService : IExternalAPIService
     private static string _binanceWebSocketUrl = "wss://stream.binance.com:9443/stream?streams=btcusdt@kline_1m";
     // wss://stream.binance.com:9443/stream?streams=ethbtc@kline1m/linkusdt@kline1m
     private static ClientWebSocket _ws;
+
+    private static bool _resetWebsocket;
     private readonly ISymbolRepository _symbolRepository;
     private readonly ICandleRepository _candleRepository;
 
@@ -33,6 +35,7 @@ public class BinanceService : IExternalAPIService
         Console.WriteLine("Creating BinanceService object");
         _symbolRepository = symbolRepository;
         _candleRepository = candleRepository;
+        _resetWebsocket = false;
         StartWebSocket();        
     }
 
@@ -135,13 +138,27 @@ public class BinanceService : IExternalAPIService
             byte[] buffer = new byte[1024];
             while (_ws.State == WebSocketState.Open)
             {
+                if(_resetWebsocket == true) break;
+
                 var result = await _ws.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
                 if (result.MessageType == WebSocketMessageType.Close)
                     await _ws.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
                 else
-                    Console.WriteLine($"{BitConverter.ToString(buffer, 0, result.Count)}");
+                {
+                    var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
+                    Console.WriteLine(message);
+                    Console.WriteLine(result.Count);
+                }
             }
         }
+
+        RestartWebSocket();
+    }
+
+    private void RestartWebSocket()
+    {
+        _resetWebsocket = false;
+        StartWebSocket();
     }
 }
 
