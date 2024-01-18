@@ -6,6 +6,8 @@ using JoltXServer.Repositories;
 using System.Net.WebSockets;
 using Microsoft.VisualBasic;
 using System.Text;
+using Newtonsoft.Json.Linq;
+using System.Text.Json.Nodes;
 
 namespace JoltXServer.Services;
 
@@ -126,6 +128,24 @@ public class BinanceService : IExternalAPIService
     // websocket
     // SELECT id FROM table ORDER BY id DESC LIMIT 0,1 - to get row with highest id
 
+    private JToken? parseBuffer(byte[] buffer, int size)
+    {
+        try
+        {
+            // convert byte buffer to string, and parse to get candle data
+            string jsonData = Encoding.UTF8.GetString(buffer, 0, size);
+            int index = jsonData.IndexOf("\"k\":") + 4;
+            jsonData = jsonData.Substring(index, jsonData.Length - index - 2);
+            
+            // deserialise json string to JToken
+            return JsonConvert.DeserializeObject<JToken>(jsonData);
+        }
+        catch(Exception ex)
+        {
+            Console.WriteLine(ex);
+            return null;
+        }
+    }
 
     private async void StartWebSocket()
     {
@@ -145,9 +165,17 @@ public class BinanceService : IExternalAPIService
                     await _ws.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
                 else
                 {
-                    var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                    Console.WriteLine(message);
-                    Console.WriteLine(result.Count);
+                    var candleData = parseBuffer(buffer, result.Count);
+                    if(candleData != null && (bool)candleData["x"])
+                    {
+                        Console.WriteLine($"1m candle for {candleData["s"]}");
+                        Console.WriteLine(candleData["t"]);
+                        Console.WriteLine(candleData["o"]);
+                        Console.WriteLine(candleData["c"]);
+                        Console.WriteLine($"Buffer size: {result.Count}");
+
+                    }
+                    
                 }
             }
         }
@@ -155,6 +183,7 @@ public class BinanceService : IExternalAPIService
         RestartWebSocket();
     }
 
+    // TODO fix this cycle of functions
     private void RestartWebSocket()
     {
         _resetWebsocket = false;
