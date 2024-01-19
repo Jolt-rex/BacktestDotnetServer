@@ -23,9 +23,9 @@ public class BinanceService : IExternalAPIService
     private static readonly string _binanceUrl = "https://api3.binance.com/api/v3";
     // `${klineEndpoint}?symbol=${s}&interval=${timeFrame}&limit=${API_KLINE_LIMIT}`
     // `&startTime=${startTime.toString()}&endTime=${endTime}
-    private static string _binanceWebSocketUrl = "wss://stream.binance.com:9443/stream?streams=btcusdt@kline_1m";
+    private static string _binanceWebSocketUrl = "wss://stream.binance.com:9443/stream?streams=btcusdt@kline_1m/linkusdt@kline_1m";
     // wss://stream.binance.com:9443/stream?streams=ethbtc@kline1m/linkusdt@kline1m
-    private static ClientWebSocket _ws;
+    private static ClientWebSocket? _ws;
 
     private static bool _resetWebsocket;
     private readonly ISymbolRepository _symbolRepository;
@@ -38,7 +38,7 @@ public class BinanceService : IExternalAPIService
         _symbolRepository = symbolRepository;
         _candleRepository = candleRepository;
         _resetWebsocket = false;
-        StartWebSocket();        
+        WebSocketLoop();        
     }
 
     // add candles to websocket
@@ -61,7 +61,7 @@ public class BinanceService : IExternalAPIService
 
         _activeSymbols[symbol] = previousCandles[^1].Time;
         
-        StartWebSocket();
+        WebSocketLoop();
 
         return count;
     }
@@ -147,47 +147,48 @@ public class BinanceService : IExternalAPIService
         }
     }
 
-    private async void StartWebSocket()
+    private async void WebSocketLoop()
     {
-        _ws?.Dispose();
-
-        using(_ws = new ClientWebSocket())
+        while(true)
         {
-            Console.WriteLine($"Connecting to websocket {_binanceWebSocketUrl}");
-            await _ws.ConnectAsync(new Uri(_binanceWebSocketUrl), CancellationToken.None);
-            byte[] buffer = new byte[1024];
-            while (_ws.State == WebSocketState.Open)
+            using(_ws = new ClientWebSocket())
             {
-                if(_resetWebsocket == true) break;
-
-                var result = await _ws.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-                if (result.MessageType == WebSocketMessageType.Close)
-                    await _ws.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, CancellationToken.None);
-                else
+                Console.WriteLine($"Connecting to websocket {_binanceWebSocketUrl}");
+                await _ws.ConnectAsync(new Uri(_binanceWebSocketUrl), CancellationToken.None);
+                byte[] buffer = new byte[1024];
+                while (_ws.State == WebSocketState.Open)
                 {
-                    var candleData = parseBuffer(buffer, result.Count);
-                    if(candleData != null && (bool)candleData["x"])
-                    {
-                        Console.WriteLine($"1m candle for {candleData["s"]}");
-                        Console.WriteLine(candleData["t"]);
-                        Console.WriteLine(candleData["o"]);
-                        Console.WriteLine(candleData["c"]);
-                        Console.WriteLine($"Buffer size: {result.Count}");
 
+                    var result = await _ws.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    if (result.MessageType == WebSocketMessageType.Close) break;
+                    else
+                    {
+                        var candleData = parseBuffer(buffer, result.Count);
+                        if(candleData != null && (bool)candleData["x"])
+                        {
+                            Console.WriteLine($"1m candle for {candleData["s"]}");
+                            Console.WriteLine(candleData["t"]);
+                            Console.WriteLine(candleData["o"]);
+                            Console.WriteLine(candleData["c"]);
+                            Console.WriteLine($"Buffer size: {result.Count}");
+
+                        }
+                        
                     }
-                    
+
+                    if(_resetWebsocket == true) break;
                 }
+                await closeWebSocket();
             }
         }
-
-        RestartWebSocket();
     }
 
-    // TODO fix this cycle of functions
-    private void RestartWebSocket()
+    private async Task closeWebSocket()
     {
+        Console.WriteLine("Closing Websocket connection");
+        if(_ws != null)
+            await _ws.CloseAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
         _resetWebsocket = false;
-        StartWebSocket();
     }
 }
 
