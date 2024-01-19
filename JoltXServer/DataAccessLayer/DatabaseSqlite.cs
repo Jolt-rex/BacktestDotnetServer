@@ -29,7 +29,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
             //await CreateInitialTablesIfNotExist();
         } catch (Exception ex)
         {
-            Console.WriteLine($"Exception raised attempting database startup: {ex.Message}");
+            Console.Error.WriteLine($"Exception raised attempting database startup: {ex.Message}");
         }
     }
 
@@ -282,6 +282,30 @@ public class DatabaseSqlite : IDatabaseSqlite{
         }
     }
 
+    public async Task<string[]> GetAllActiveSymbolNames()
+    {
+        await CheckConnection();
+
+        List<string> symbolNames = new ();
+        using(var command = _connection.CreateCommand())
+        {
+            command.CommandText =
+            $"""
+                SELECT name FROM symbols
+                WHERE is_active = 1
+            """;
+
+            var reader = await command.ExecuteReaderAsync();
+
+            while(reader.Read())
+            {
+                string symbol = reader.GetString(0);
+                symbolNames.Add(reader.GetString(0));
+            }
+        }
+        return symbolNames.ToArray();
+    }
+
     public async Task<bool> CheckTableExists(string tableName)
     {
         await CheckConnection();
@@ -382,14 +406,14 @@ public class DatabaseSqlite : IDatabaseSqlite{
     // returns earliest candle open time in database for given symbol
     // if table does not exist, table will be created and return 0
     // if table is empty we return 0
-    public async Task<long> GetEarliestCandleTime(string symbolName)
+    public async Task<long> GetEarliestCandleTime(string symbolNameAndTime)
     {
         await CheckConnection();
 
-        if(! await CheckTableExists(symbolName))
+        if(! await CheckTableExists(symbolNameAndTime))
         {
-            Console.WriteLine($"Table {symbolName} does not exist. Creating table");
-            await CreateCandleTable(symbolName);
+            Console.WriteLine($"Table {symbolNameAndTime} does not exist. Creating table");
+            await CreateCandleTable(symbolNameAndTime);
             return 0;
         }
 
@@ -397,7 +421,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
         {
             command.CommandText =
             $"""
-                SELECT 'time' FROM {symbolName} LIMIT 1
+                SELECT time FROM {symbolNameAndTime} ORDER BY time DESC LIMIT 0,1
             """;
 
             var reader = await command.ExecuteReaderAsync();

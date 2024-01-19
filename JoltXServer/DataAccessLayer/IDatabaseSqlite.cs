@@ -15,6 +15,7 @@ public interface IDatabaseSqlite
     public Task<int> CreateSymbol(Symbol symbol);
     public Task<int> UpdateSymbolById(Symbol symbol);
     public Task<int> ActivateSymbolByName(string name);
+    public Task<string[]> GetAllActiveSymbolNames();
     // END SYMBOLS
 
     // CANDLES

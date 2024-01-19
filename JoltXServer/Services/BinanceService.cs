@@ -24,7 +24,7 @@ public class BinanceService : IExternalAPIService
     private static readonly string _binanceUrl = "https://api3.binance.com/api/v3";
     // `${klineEndpoint}?symbol=${s}&interval=${timeFrame}&limit=${API_KLINE_LIMIT}`
     // `&startTime=${startTime.toString()}&endTime=${endTime}
-    private static string _binanceWebSocketUrl = "wss://stream.binance.com:9443/stream?streams=btcusdt@kline_1m";
+    private static string _binanceWebSocketUrl = "wss://stream.binance.com:9443/stream?streams=";
     // wss://stream.binance.com:9443/stream?streams=ethbtc@kline1m/linkusdt@kline1m
     private static ClientWebSocket? _ws;
 
@@ -39,36 +39,37 @@ public class BinanceService : IExternalAPIService
         _symbolRepository = symbolRepository;
         _candleRepository = candleRepository;
 
-        _activeSymbols = new Dictionary<string, long>
-        {
-            { "BTCUSDT", 0 }
-        };
+        StartupActivateSymbols();
 
         WebSocketLoop();
     }
 
-    // add candles to websocket
-    // retrieve most recent candles and add to repo
-    // restart websocket
-    public async Task<int> PreloadSymbol(string symbol)
+    public async void StartupActivateSymbols()
     {
+        _activeSymbols = new Dictionary<string, long>();
 
-        _activeSymbols.Add(symbol, 0);
+        string[] symbolNames = await _symbolRepository.GetAllActiveSymbolNames();
+        for(int i = 0; i < symbolNames.Length; i++)
+        {
+            //_activeSymbols.Add(symbolNames[i], 0);
+            await ActivateOneSymbol(symbolNames[i], true);
+            Console.WriteLine($"Adding symbol {symbolNames[i]} to active list");
+        }
+    }
 
-        _binanceWebSocketUrl += $"/{symbol}@kline1m";
+    // add symbol to ws url
+    // update last candle time from db
+    // restart websocket
+    public async Task ActivateOneSymbol(string symbol, bool isStartup = false)
+    {
+        if(!_binanceWebSocketUrl.EndsWith('=')) _binanceWebSocketUrl += "/";        
+        _binanceWebSocketUrl += $"{symbol.ToLower()}@kline1m";
 
-        List<Candle>? previousCandles = await GetCandlesAsync(symbol);
+        // get last candle time from db
+        long lastCandleTime = await _candleRepository.GetLastCandleTime(symbol+'m');
+        _activeSymbols.Add(symbol, lastCandleTime);
 
-        if(previousCandles == null || previousCandles.Count == 0)
-            return -1;
-
-        int count = await _candleRepository.InsertCandles(symbol + 'c', previousCandles);
-
-        _activeSymbols[symbol] = previousCandles[^1].Time;
-        
-        WebSocketLoop();
-
-        return count;
+        _resetWebsocket = !isStartup;
     }
 
     public async Task<List<Candle>?> GetCandlesAsync(string symbol, long startTime = 0, long endTime = 0)
@@ -171,15 +172,13 @@ public class BinanceService : IExternalAPIService
                         var candleData = parseBuffer(buffer, result.Count);
                         if(candleData != null && (bool)candleData["x"])
                         {
-                            addCandle(candleData);       
+                            await addCandle(candleData);       
                             Console.WriteLine($"1m candle for {candleData["s"]}");
                             Console.WriteLine(candleData["t"]);
                             Console.WriteLine(candleData["o"]);
                             Console.WriteLine(candleData["c"]);
                             Console.WriteLine($"Buffer size: {result.Count}");
-
-                        }
-                        
+                        }                        
                     }
 
                     if(_resetWebsocket == true) break;
@@ -189,7 +188,7 @@ public class BinanceService : IExternalAPIService
         }
     }
 
-    private void addCandle(JToken candleData)
+    private async Task addCandle(JToken candleData)
     {
         string symbol = (string)candleData["s"];
         long lastCandleTime = _activeSymbols[(string)candleData["s"]];
@@ -206,8 +205,10 @@ public class BinanceService : IExternalAPIService
                 Close = (decimal)candleData["c"],
                 Volume = (decimal)candleData["q"]
             };
-            _candleRepository.InsertOneCandle(symbol + 'm', newCandle);
+            await _candleRepository.InsertOneCandle(symbol + 'm', newCandle);
         }
+        else
+            Console.WriteLine($"Last candle not in time series. Current time: {currentCandleTime} Previous: {lastCandleTime}");
 
     }
 
@@ -221,5 +222,7 @@ public class BinanceService : IExternalAPIService
 }
 
 // TODO
-// 1. on startup get most recent candle from db for all active symbols, add them to _activeSymbols
+// Done - 1. on startup get most recent candle from db for all active symbols, add them to _activeSymbols
+
+
 // 2. if most recent candle is lagging current candle time - API request in loop to update

@@ -22,6 +22,8 @@ public interface ISymbolRepository
 
     public Task<int> ActivateByName(string name);
 
+    public Task<string[]> GetAllActiveSymbolNames();
+
     // // DeleteById
     // public Task<int> DeleteById(int id);
 
