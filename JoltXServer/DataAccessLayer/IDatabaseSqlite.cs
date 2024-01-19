@@ -18,6 +18,7 @@ public interface IDatabaseSqlite
     // END SYMBOLS
 
     // CANDLES
+    public Task<int> InsertOneCandle(string symbolNameAndTime, Candle candle);
     public Task<int> InsertCandles(string symbolNameAndTime, List<Candle> candles);
     public Task<long> GetEarliestCandleTime(string symbolName);
     public Task<List<Candle>?> GetCandles(string symbol, char interval, long startTime, long endTime);

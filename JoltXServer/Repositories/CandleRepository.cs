@@ -20,4 +20,9 @@ public class CandleRepository : ICandleRepository
     {
         return await _dbConnection.InsertCandles(symbolNameAndTime, candles);
     }
+
+    public async Task<int> InsertOneCandle(string symbolNameAndTime, Candle candle)
+    {
+        return await _dbConnection.InsertOneCandle(symbolNameAndTime, candle);
+    }
 }

@@ -322,6 +322,26 @@ public class DatabaseSqlite : IDatabaseSqlite{
 
     // Symbol name and time is of the format 'ETHBTCh' 'ETHBTCm' the last char is the
     // time interval, hours or minutes
+    public async Task<int> InsertOneCandle(string symbolNameAndTime, Candle candle)
+    {
+        await CheckConnection();
+
+        using var command = _connection.CreateCommand();
+        try
+        {
+            command.CommandText =
+            $"""
+                    INSERT INTO {symbolNameAndTime} (time,open,high,low,close,volume) 
+                    VALUES ({candle.Time}, '{candle.Open}', '{candle.High}', '{candle.Low}', '{candle.Close}', {candle.Volume});
+                """;
+            return await command.ExecuteNonQueryAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Candle data not added to database: exception occurred: {ex}");
+            return -1;
+        }
+    }
     public async Task<int> InsertCandles(string symbolNameAndTime, List<Candle> candles)
     {
         // validate time series data

@@ -8,26 +8,27 @@ using Microsoft.VisualBasic;
 using System.Text;
 using Newtonsoft.Json.Linq;
 using System.Text.Json.Nodes;
+using SQLitePCL;
 
 namespace JoltXServer.Services;
 
 public class BinanceService : IExternalAPIService
 {
-    private static readonly int SECONDS_IN_HOUR = 3600;
-    private static readonly int SECONDS_IN_MINUTE = 60;
+    private static readonly int MSECONDS_IN_HOUR = 3_600_000;
+    private static readonly int MSECONDS_IN_MINUTE = 60_000;
     // TODO update this limit rate from API regularly
     private static int _binanceCandleLimitPerRequest = 1500;
 
-    private static readonly IDictionary<string, long> _activeSymbols = new Dictionary<string, long>();
+    private static IDictionary<string, long> _activeSymbols;
 
     private static readonly string _binanceUrl = "https://api3.binance.com/api/v3";
     // `${klineEndpoint}?symbol=${s}&interval=${timeFrame}&limit=${API_KLINE_LIMIT}`
     // `&startTime=${startTime.toString()}&endTime=${endTime}
-    private static string _binanceWebSocketUrl = "wss://stream.binance.com:9443/stream?streams=btcusdt@kline_1m/linkusdt@kline_1m";
+    private static string _binanceWebSocketUrl = "wss://stream.binance.com:9443/stream?streams=btcusdt@kline_1m";
     // wss://stream.binance.com:9443/stream?streams=ethbtc@kline1m/linkusdt@kline1m
     private static ClientWebSocket? _ws;
 
-    private static bool _resetWebsocket;
+    private static bool _resetWebsocket = false;
     private readonly ISymbolRepository _symbolRepository;
     private readonly ICandleRepository _candleRepository;
 
@@ -37,8 +38,13 @@ public class BinanceService : IExternalAPIService
         Console.WriteLine("Creating BinanceService object");
         _symbolRepository = symbolRepository;
         _candleRepository = candleRepository;
-        _resetWebsocket = false;
-        WebSocketLoop();        
+
+        _activeSymbols = new Dictionary<string, long>
+        {
+            { "BTCUSDT", 0 }
+        };
+
+        WebSocketLoop();
     }
 
     // add candles to websocket
@@ -49,8 +55,7 @@ public class BinanceService : IExternalAPIService
 
         _activeSymbols.Add(symbol, 0);
 
-        if(_binanceWebSocketUrl[^1] != '=') _binanceWebSocketUrl += '/';
-        _binanceWebSocketUrl += $"{symbol}@kline1m";
+        _binanceWebSocketUrl += $"/{symbol}@kline1m";
 
         List<Candle>? previousCandles = await GetCandlesAsync(symbol);
 
@@ -166,6 +171,7 @@ public class BinanceService : IExternalAPIService
                         var candleData = parseBuffer(buffer, result.Count);
                         if(candleData != null && (bool)candleData["x"])
                         {
+                            addCandle(candleData);       
                             Console.WriteLine($"1m candle for {candleData["s"]}");
                             Console.WriteLine(candleData["t"]);
                             Console.WriteLine(candleData["o"]);
@@ -183,6 +189,28 @@ public class BinanceService : IExternalAPIService
         }
     }
 
+    private void addCandle(JToken candleData)
+    {
+        string symbol = (string)candleData["s"];
+        long lastCandleTime = _activeSymbols[(string)candleData["s"]];
+        long currentCandleTime = (long)candleData["t"];
+        if(lastCandleTime == currentCandleTime - MSECONDS_IN_MINUTE || lastCandleTime == 0)
+        {
+            _activeSymbols[symbol] = currentCandleTime;
+            Candle newCandle = new()
+            {
+                Time = (long)candleData["t"],
+                Open = (decimal)candleData["o"],
+                High = (decimal)candleData["h"],
+                Low = (decimal)candleData["l"],
+                Close = (decimal)candleData["c"],
+                Volume = (decimal)candleData["q"]
+            };
+            _candleRepository.InsertOneCandle(symbol + 'm', newCandle);
+        }
+
+    }
+
     private async Task closeWebSocket()
     {
         Console.WriteLine("Closing Websocket connection");
@@ -192,3 +220,6 @@ public class BinanceService : IExternalAPIService
     }
 }
 
+// TODO
+// 1. on startup get most recent candle from db for all active symbols, add them to _activeSymbols
+// 2. if most recent candle is lagging current candle time - API request in loop to update
