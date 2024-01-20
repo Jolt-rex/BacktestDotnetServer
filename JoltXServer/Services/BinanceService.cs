@@ -39,12 +39,16 @@ public class BinanceService : IExternalAPIService
         _symbolRepository = symbolRepository;
         _candleRepository = candleRepository;
 
-        StartupActivateSymbols();
-
-        WebSocketLoop();
+        Startup();
     }
 
-    public async void StartupActivateSymbols()
+    private async void Startup()
+    {
+        await StartupActivateSymbols();
+        await WebSocketLoop();
+    }
+
+    private async Task StartupActivateSymbols()
     {
         _activeSymbols = new Dictionary<string, long>();
 
@@ -142,6 +146,8 @@ public class BinanceService : IExternalAPIService
             string jsonData = Encoding.UTF8.GetString(buffer, 0, size);
             int index = jsonData.IndexOf("\"k\":") + 4;
             jsonData = jsonData.Substring(index, jsonData.Length - index - 2);
+
+            Console.WriteLine($"Parsing buffer: {jsonData}");
             
             // deserialise json string to JToken
             return JsonConvert.DeserializeObject<JToken>(jsonData);
@@ -153,7 +159,7 @@ public class BinanceService : IExternalAPIService
         }
     }
 
-    private async void WebSocketLoop()
+    private async Task WebSocketLoop()
     {
         while(true)
         {
@@ -166,20 +172,20 @@ public class BinanceService : IExternalAPIService
                 {
 
                     var result = await _ws.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                    Console.WriteLine($"Received bytes {result.Count}");
                     if (result.MessageType == WebSocketMessageType.Close) break;
-                    else
+
+                    var candleData = parseBuffer(buffer, result.Count);
+                    if(candleData != null && (bool)candleData["x"])
                     {
-                        var candleData = parseBuffer(buffer, result.Count);
-                        if(candleData != null && (bool)candleData["x"])
-                        {
-                            await addCandle(candleData);       
-                            Console.WriteLine($"1m candle for {candleData["s"]}");
-                            Console.WriteLine(candleData["t"]);
-                            Console.WriteLine(candleData["o"]);
-                            Console.WriteLine(candleData["c"]);
-                            Console.WriteLine($"Buffer size: {result.Count}");
-                        }                        
-                    }
+                        Console.WriteLine($"1m candle for {candleData["s"]}");
+                        Console.WriteLine(candleData["t"]);
+                        Console.WriteLine(candleData["o"]);
+                        Console.WriteLine(candleData["c"]);
+                        Console.WriteLine($"Buffer size: {result.Count}");
+                        await addCandle(candleData);       
+                    }                        
+                    
 
                     if(_resetWebsocket == true) break;
                 }
@@ -223,6 +229,7 @@ public class BinanceService : IExternalAPIService
 
 // TODO
 // Done - 1. on startup get most recent candle from db for all active symbols, add them to _activeSymbols
-
+// 1.1 Find out why candles are not saving to db - use logs
 
 // 2. if most recent candle is lagging current candle time - API request in loop to update
+// 3. Start an API updater to load earlier candles

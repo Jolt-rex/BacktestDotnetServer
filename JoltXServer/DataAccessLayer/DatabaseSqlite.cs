@@ -314,12 +314,16 @@ public class DatabaseSqlite : IDatabaseSqlite{
         {
             command.CommandText = 
             $"""
-                SELECT EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='{tableName}')
+                SELECT EXISTS (SELECT 1 FROM sqlite_schema WHERE type='table' AND name='{tableName}')
             """;
 
-            int result = await command.ExecuteNonQueryAsync();
+             var reader = await command.ExecuteReaderAsync();
 
-            return result == 1;
+            int count = 0;
+            if(reader.Read())
+                count = reader.GetInt32(0);
+
+            return count == 1;
         }
     }
 
