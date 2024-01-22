@@ -28,12 +28,12 @@ public static class CandleTimeSeriesValidator
 {
     public static bool Validate(char interval, List<Candle> candles)
     {
-        int intervalInSeconds = interval == 'h' ? 3600 : 60;
+        int intervalInMilliSeconds = interval == 'h' ? 3_600_000 : 60_000;
         long previousTime = candles[0].Time;
 
         for(int i = 1; i < candles.Count; i++)
         {
-            if(previousTime + intervalInSeconds != candles[i].Time)
+            if(previousTime + intervalInMilliSeconds != candles[i].Time)
                 return false;
 
             previousTime = candles[i].Time;
