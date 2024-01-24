@@ -9,6 +9,7 @@ using System.Text;
 using Newtonsoft.Json.Linq;
 using System.Text.Json.Nodes;
 using SQLitePCL;
+using System.Diagnostics;
 
 namespace JoltXServer.Services;
 
@@ -53,7 +54,8 @@ public class BinanceService : IExternalAPIService
     // wss://stream.binance.com:9443/stream?streams=ethbtc@kline_1m/linkusdt@kline_1m
     private static ClientWebSocket? _ws;
 
-    private static PriorityQueue<ApiRequest, ushort> _apiQue;
+    private static PriorityQueue<ApiRequest, Priority> _apiQue;
+    private static bool _queIsProcessing = false;
 
     private static bool _resetWebsocket = false;
     private readonly ISymbolRepository _symbolRepository;
@@ -66,7 +68,7 @@ public class BinanceService : IExternalAPIService
         _symbolRepository = symbolRepository;
         _candleRepository = candleRepository;
 
-        _apiQue = new PriorityQueue<ApiRequest, ushort>();
+        _apiQue = new PriorityQueue<ApiRequest, Priority>();
 
         Startup();
     }
@@ -224,6 +226,7 @@ public class BinanceService : IExternalAPIService
         string symbol = (string)candleData["s"];
         long lastCandleTime = _activeSymbols[(string)candleData["s"]];
         long currentCandleTime = (long)candleData["t"];
+        // TODO bug here this is always false
         if(lastCandleTime == currentCandleTime - MSECONDS_IN_MINUTE || lastCandleTime == 0)
         {
             Candle newCandle = new()
@@ -239,14 +242,12 @@ public class BinanceService : IExternalAPIService
             _activeSymbols[symbol] = currentCandleTime;
         }
         else
+        {
             Console.WriteLine($"Last candle not in time series. Current time: {currentCandleTime} Previous: {lastCandleTime}");
             Console.WriteLine($"There are {(currentCandleTime - lastCandleTime) / 60_000} candles to be updated");
             Console.WriteLine($"Retrieving max limit of candles that are missing..");
-            var candles = await GetCandlesAsync(symbol, lastCandleTime + MSECONDS_IN_MINUTE, 0);
-            Console.WriteLine($"First obtained candle time: {candles[0].Time}");
-            int count = await _candleRepository.InsertCandles(symbol + 'm', candles);
-            _activeSymbols[symbol] = candles[candles.Count-1].Time;
-            Console.WriteLine($"Added {count} candles to db");
+            AddRequestToQue(Priority.High, symbol, lastCandleTime + MSECONDS_IN_MINUTE, 0, true);
+        }
     }
 
     private async Task closeWebSocket()
@@ -257,12 +258,23 @@ public class BinanceService : IExternalAPIService
         _resetWebsocket = false;
     }
 
+    private void AddRequestToQue(Priority priority, string symbol, long startTime, long endTime, bool isMostRecentCandles)
+    {
+        ApiRequest request = new(symbol, startTime, endTime, isMostRecentCandles);
+        Console.WriteLine($"Adding request to que {request}");
+        _apiQue.Enqueue(request, priority);
+        if(!_queIsProcessing)
+            ProcessQue();
+    }
+
     private async Task ProcessQue()
     {
+        _queIsProcessing = true;
+        Console.WriteLine("Starting que");
         while(_apiQue.Count > 0)
         {
             ApiRequest request = _apiQue.Dequeue();
-            Console.WriteLine($"Process que request: {request.ToString()}");
+            Console.WriteLine($"Process que request: {request}");
             var candles = await GetCandlesAsync(request.Symbol, request.StartTime, request.EndTime);
             int count = await _candleRepository.InsertCandles(request.Symbol + 'm', candles);
             
@@ -274,6 +286,8 @@ public class BinanceService : IExternalAPIService
             // wait 2000ms between requests
             await Task.Delay(2000);
         }
+        _queIsProcessing = false;
+        Console.WriteLine("Ending que");
     }
 }
 
