@@ -14,6 +14,31 @@ namespace JoltXServer.Services;
 
 public class BinanceService : IExternalAPIService
 {
+    private enum Priority : ushort
+    {
+        High = 1,
+        Medium = 2,
+        Low = 3
+    };
+
+    private struct ApiRequest
+    {
+        public ApiRequest(string symbol, long startTime, long endTime, bool isMostRecent)
+        {
+            Symbol = symbol;
+            StartTime = startTime;
+            EndTime = endTime;
+            IsMostRecentCandles = isMostRecent;
+        }
+
+        public string Symbol { get; }
+        public long StartTime { get; }
+        public long EndTime { get; }
+        public bool IsMostRecentCandles { get; }
+
+        public override string ToString() => $"ApiRequest for symbol: {Symbol} start time: {StartTime} end time: {EndTime}";
+    }
+
     private static readonly int MSECONDS_IN_HOUR = 3_600_000;
     private static readonly int MSECONDS_IN_MINUTE = 60_000;
     // TODO update this limit rate from API regularly
@@ -28,6 +53,8 @@ public class BinanceService : IExternalAPIService
     // wss://stream.binance.com:9443/stream?streams=ethbtc@kline_1m/linkusdt@kline_1m
     private static ClientWebSocket? _ws;
 
+    private static PriorityQueue<ApiRequest, ushort> _apiQue;
+
     private static bool _resetWebsocket = false;
     private readonly ISymbolRepository _symbolRepository;
     private readonly ICandleRepository _candleRepository;
@@ -38,6 +65,8 @@ public class BinanceService : IExternalAPIService
         Console.WriteLine("Creating BinanceService object");
         _symbolRepository = symbolRepository;
         _candleRepository = candleRepository;
+
+        _apiQue = new PriorityQueue<ApiRequest, ushort>();
 
         Startup();
     }
@@ -227,8 +256,28 @@ public class BinanceService : IExternalAPIService
             await _ws.CloseAsync(WebSocketCloseStatus.NormalClosure, null, CancellationToken.None);
         _resetWebsocket = false;
     }
+
+    private async Task ProcessQue()
+    {
+        while(_apiQue.Count > 0)
+        {
+            ApiRequest request = _apiQue.Dequeue();
+            Console.WriteLine($"Process que request: {request.ToString()}");
+            var candles = await GetCandlesAsync(request.Symbol, request.StartTime, request.EndTime);
+            int count = await _candleRepository.InsertCandles(request.Symbol + 'm', candles);
+            
+            if(request.IsMostRecentCandles)
+                _activeSymbols[request.Symbol] = candles[candles.Count-1].Time;
+            
+            Console.WriteLine($"Added {count} candles to db");
+
+            // wait 2000ms between requests
+            await Task.Delay(2000);
+        }
+    }
 }
 
 // TODO
+// 1. Fix if(lastCandleTime == currentCandleTime - MSECONDS_IN_MINUTE || lastCandleTime == 0) ln 198 - should be true when ws is up to date
 // 2. if most recent candle is lagging current candle time - API request in loop to update
 // 3. Start an API updater to load earlier candles
