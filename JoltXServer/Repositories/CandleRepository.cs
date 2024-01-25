@@ -18,7 +18,7 @@ public class CandleRepository : ICandleRepository
 
     public async Task<long> GetLastCandleTime(string symbol)
     {
-        return await _dbConnection.GetEarliestCandleTime(symbol);
+        return await _dbConnection.GetLatestCandleTime(symbol);
     }
 
     public async Task<int> InsertCandles(string symbolNameAndTime, List<Candle> candles)

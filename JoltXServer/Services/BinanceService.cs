@@ -227,6 +227,7 @@ public class BinanceService : IExternalAPIService
         long lastCandleTime = _activeSymbols[(string)candleData["s"]];
         long currentCandleTime = (long)candleData["t"];
         // TODO bug here this is always false
+        Console.WriteLine($"Adding candle last candle time: {lastCandleTime} current time: {currentCandleTime}");
         if(lastCandleTime == currentCandleTime - MSECONDS_IN_MINUTE || lastCandleTime == 0)
         {
             Candle newCandle = new()
@@ -276,10 +277,18 @@ public class BinanceService : IExternalAPIService
             ApiRequest request = _apiQue.Dequeue();
             Console.WriteLine($"Process que request: {request}");
             var candles = await GetCandlesAsync(request.Symbol, request.StartTime, request.EndTime);
-            int count = await _candleRepository.InsertCandles(request.Symbol + 'm', candles);
             
+            if(candles == null) continue;
+
+            // if last candle is not closed, remove it
             if(request.IsMostRecentCandles)
+            {
+                // remove unclosed candle
+                candles.RemoveAt(candles.Count - 1);
                 _activeSymbols[request.Symbol] = candles[candles.Count-1].Time;
+            }
+            
+            int count = await _candleRepository.InsertCandles(request.Symbol + 'm', candles);
             
             Console.WriteLine($"Added {count} candles to db");
 

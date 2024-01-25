@@ -410,7 +410,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
     // returns earliest candle open time in database for given symbol
     // if table does not exist, table will be created and return 0
     // if table is empty we return 0
-    public async Task<long> GetEarliestCandleTime(string symbolNameAndTime)
+    public async Task<long> GetLatestCandleTime(string symbolNameAndTime)
     {
         await CheckConnection();
 
