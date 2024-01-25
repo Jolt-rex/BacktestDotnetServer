@@ -226,7 +226,7 @@ public class BinanceService : IExternalAPIService
         string symbol = (string)candleData["s"];
         long lastCandleTime = _activeSymbols[(string)candleData["s"]];
         long currentCandleTime = (long)candleData["t"];
-        // TODO bug here this is always false
+
         Console.WriteLine($"Adding candle last candle time: {lastCandleTime} current time: {currentCandleTime}");
         if(lastCandleTime == currentCandleTime - MSECONDS_IN_MINUTE || lastCandleTime == 0)
         {
@@ -237,7 +237,7 @@ public class BinanceService : IExternalAPIService
                 High = (decimal)candleData["h"],
                 Low = (decimal)candleData["l"],
                 Close = (decimal)candleData["c"],
-                Volume = (decimal)candleData["q"]
+                Volume = (decimal)candleData["v"]
             };
             await _candleRepository.InsertOneCandle(symbol + 'm', newCandle);
             _activeSymbols[symbol] = currentCandleTime;
@@ -301,6 +301,4 @@ public class BinanceService : IExternalAPIService
 }
 
 // TODO
-// 1. Fix if(lastCandleTime == currentCandleTime - MSECONDS_IN_MINUTE || lastCandleTime == 0) ln 198 - should be true when ws is up to date
-// 2. if most recent candle is lagging current candle time - API request in loop to update
 // 3. Start an API updater to load earlier candles
