@@ -125,49 +125,6 @@ public class BinanceService : IExternalAPIService
         return candleSticks;
     }
 
-    public async Task<List<Candle>> GetCandlesGeneratorAsync(string symbol, long startTime, long endTime = 0)
-    {
-        string requestUrl = _binanceUrl + $"klines?symbol={symbol}&interval=1m";
-
-        HttpClient client = new();
-        HttpResponseMessage response = await client.GetAsync(requestUrl);
-
-        // TODO
-        return new List<Candle>();
-    }
-
-    // gets earlier candles from startTime and ends at either current time, or the 
-    // first time already in the database
-    public async Task<int> FetchHistoricalCandles(string symbol, long startTime)
-    {
-        return 1;
-        // int interval = symbol[^1] == 'h' ? SECONDS_IN_HOUR : SECONDS_IN_MINUTE;
-        // long endTime = await _dbConnection.GetEarliestCandleTime(symbol);
-
-        // // if there are no current candles in database, set endTime to now
-        // // otherwise, subtract interval time to get previous candle endTime
-        // if(endTime == 0) endTime = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
-        // else endTime -= interval;
-
-        // if((endTime - startTime) / interval > _binanceCandleLimitPerRequest)
-        // {
-        //     // use generator as request limit is 1500 TODO
-        //     return -1;
-        // }
-        
-        // // else make request directly
-        // var candles = await GetCandlesAsync(symbol, startTime, endTime);
-
-        // if(candles == null) return 0;
-        
-        // await _dbConnection.InsertCandles(symbol, candles);
-
-        // return candles.Count;
-    }
-
-    // websocket
-    // SELECT id FROM table ORDER BY id DESC LIMIT 0,1 - to get row with highest id
-
     private JToken? parseBuffer(byte[] buffer, int size)
     {
         try
@@ -203,16 +160,10 @@ public class BinanceService : IExternalAPIService
                     if (result.MessageType == WebSocketMessageType.Close) break;
 
                     var candleData = parseBuffer(buffer, result.Count);
+
+                    // if the websocket candle is closed, add the candle
                     if(candleData != null && (bool)candleData["x"])
-                    {
-                        // Console.WriteLine($"1m candle for {candleData["s"]}");
-                        // Console.WriteLine(candleData["t"]);
-                        // Console.WriteLine(candleData["o"]);
-                        // Console.WriteLine(candleData["c"]);
-                        // Console.WriteLine($"Buffer size: {result.Count}");
-                        await addCandle(candleData);       
-                    }                        
-                    
+                        addCandle(candleData);          
 
                     if(_resetWebsocket == true) break;
                 }
@@ -227,7 +178,7 @@ public class BinanceService : IExternalAPIService
         long lastCandleTime = _activeSymbols[(string)candleData["s"]];
         long currentCandleTime = (long)candleData["t"];
 
-        Console.WriteLine($"Adding candle last candle time: {lastCandleTime} current time: {currentCandleTime}");
+        Console.WriteLine($"Adding candle from websocket {symbol} last candle time: {lastCandleTime} current time: {currentCandleTime}");
         if(lastCandleTime == currentCandleTime - MSECONDS_IN_MINUTE || lastCandleTime == 0)
         {
             Candle newCandle = new()
