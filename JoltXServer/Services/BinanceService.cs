@@ -53,11 +53,11 @@ public class BinanceService : IExternalAPIService
     private static string _binanceWebSocketUrl = "wss://stream.binance.com/stream?streams=";
     // wss://stream.binance.com:9443/stream?streams=ethbtc@kline_1m/linkusdt@kline_1m
     private static ClientWebSocket? _ws;
+    private static bool _resetWebsocket = false;
 
     private static PriorityQueue<ApiRequest, Priority> _apiQue;
     private static bool _queIsProcessing = false;
 
-    private static bool _resetWebsocket = false;
     private readonly ISymbolRepository _symbolRepository;
     private readonly ICandleRepository _candleRepository;
 
@@ -222,7 +222,7 @@ public class BinanceService : IExternalAPIService
     private async Task ProcessQue()
     {
         _queIsProcessing = true;
-        Console.WriteLine("Starting que");
+        Console.WriteLine($"Starting que with {_apiQue.Count} items");
         while(_apiQue.Count > 0)
         {
             ApiRequest request = _apiQue.Dequeue();
