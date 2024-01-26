@@ -1,15 +1,10 @@
 
 using Newtonsoft.Json;
 using JoltXServer.Models;
-using JoltXServer.DataAccessLayer;
 using JoltXServer.Repositories;
 using System.Net.WebSockets;
-using Microsoft.VisualBasic;
 using System.Text;
 using Newtonsoft.Json.Linq;
-using System.Text.Json.Nodes;
-using SQLitePCL;
-using System.Diagnostics;
 
 namespace JoltXServer.Services;
 
@@ -22,7 +17,7 @@ public class BinanceService : IExternalAPIService
         Low = 3
     };
 
-    private struct ApiRequest
+    private readonly struct ApiRequest
     {
         public ApiRequest(string symbol, long startTime, long endTime, bool isMostRecent)
         {
@@ -76,7 +71,7 @@ public class BinanceService : IExternalAPIService
     private async void Startup()
     {
         await StartupActivateSymbols();
-        await WebSocketLoop();
+        WebSocketLoop();
     }
 
     private async Task StartupActivateSymbols()
@@ -125,7 +120,7 @@ public class BinanceService : IExternalAPIService
         return candleSticks;
     }
 
-    private JToken? parseBuffer(byte[] buffer, int size)
+    private JToken? ParseBuffer(byte[] buffer, int size)
     {
         try
         {
@@ -144,7 +139,7 @@ public class BinanceService : IExternalAPIService
         }
     }
 
-    private async Task WebSocketLoop()
+    private async void WebSocketLoop()
     {
         while(true)
         {
@@ -159,20 +154,20 @@ public class BinanceService : IExternalAPIService
 
                     if (result.MessageType == WebSocketMessageType.Close) break;
 
-                    var candleData = parseBuffer(buffer, result.Count);
+                    var candleData = ParseBuffer(buffer, result.Count);
 
                     // if the websocket candle is closed, add the candle
                     if(candleData != null && (bool)candleData["x"])
-                        addCandle(candleData);          
+                        AddCandle(candleData);          
 
                     if(_resetWebsocket == true) break;
                 }
-                await closeWebSocket();
+                await CloseWebSocket();
             }
         }
     }
 
-    private async Task addCandle(JToken candleData)
+    private async void AddCandle(JToken candleData)
     {
         string symbol = (string)candleData["s"];
         long lastCandleTime = _activeSymbols[(string)candleData["s"]];
@@ -202,7 +197,7 @@ public class BinanceService : IExternalAPIService
         }
     }
 
-    private async Task closeWebSocket()
+    private static async Task CloseWebSocket()
     {
         Console.WriteLine("Closing Websocket connection");
         if(_ws != null)
@@ -222,9 +217,10 @@ public class BinanceService : IExternalAPIService
     private async Task ProcessQue()
     {
         _queIsProcessing = true;
-        Console.WriteLine($"Starting que with {_apiQue.Count} items");
+        Console.WriteLine($"Starting que");
         while(_apiQue.Count > 0)
         {
+            Console.WriteLine($"Processing que item with {_apiQue.Count} items");
             ApiRequest request = _apiQue.Dequeue();
             Console.WriteLine($"Process que request: {request}");
             var candles = await GetCandlesAsync(request.Symbol, request.StartTime, request.EndTime);
