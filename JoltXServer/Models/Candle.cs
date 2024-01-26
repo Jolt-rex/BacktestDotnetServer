@@ -22,8 +22,7 @@ public struct Candle
 
 // Received char interval as either 'h' hour or 'm' minute, and validates the time
 // between each candle matches this interval
-// returns true if time series has a consistent interval
-// returns false if candles[] is empty
+// returns true if time series has a consistent interval or is empty
 public static class CandleTimeSeriesValidator
 {
     public static bool Validate(char interval, List<Candle> candles)
@@ -39,7 +38,7 @@ public static class CandleTimeSeriesValidator
             previousTime = candles[i].Time;
         }
 
-        return candles.Count >= 1;
+        return candles.Count >= 0;
     }
 }
 

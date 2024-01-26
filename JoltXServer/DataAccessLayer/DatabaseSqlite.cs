@@ -1,6 +1,7 @@
 namespace JoltXServer.DataAccessLayer;
 
 using JoltXServer.Models;
+using JoltXServer.Repositories;
 using Microsoft.Data.Sqlite;
 using System.Data;
 
@@ -350,6 +351,49 @@ public class DatabaseSqlite : IDatabaseSqlite{
 
     // Symbol name and time is of the format 'ETHBTCh' 'ETHBTCm' the last char is the
     // time interval, hours or minutes
+
+    public async Task<int> ValidateCandleTimeSeries(string symbol)
+    {
+        await CheckConnection();
+
+        if(! await CheckTableExists(symbol + 'm'))
+        {
+            Console.WriteLine($"Table {symbol + 'm'} does not exist.");
+            return -1;
+        }
+
+        List<Candle> candles = new();
+
+        using(var command = _connection.CreateCommand())
+        {
+            command.CommandText =
+            $"""
+                SELECT * FROM {symbol + 'm'} 
+            """;
+
+            var reader = await command.ExecuteReaderAsync();
+
+            while(reader.Read())
+            {
+                Candle candle = new()
+                {
+                    Time = reader.GetInt64(0),
+                    Open = reader.GetDecimal(1),
+                    High = reader.GetDecimal(2),
+                    Low = reader.GetDecimal(3),
+                    Close = reader.GetDecimal(4),
+                    Volume = reader.GetDecimal(5)
+                };
+                candles.Add(candle);
+            }
+        }
+
+        if(CandleTimeSeriesValidator.Validate('m', candles))
+            return candles.Count;
+
+        return -1;
+    }
+
     public async Task<int> InsertOneCandle(string symbolNameAndTime, Candle candle)
     {
         await CheckConnection();
@@ -410,7 +454,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
     // returns earliest candle open time in database for given symbol
     // if table does not exist, table will be created and return 0
     // if table is empty we return 0
-    public async Task<long> GetLatestCandleTime(string symbolNameAndTime)
+    public async Task<long> GetMostRecentCandleTime(string symbolNameAndTime)
     {
         await CheckConnection();
 
@@ -426,6 +470,32 @@ public class DatabaseSqlite : IDatabaseSqlite{
             command.CommandText =
             $"""
                 SELECT time FROM {symbolNameAndTime} ORDER BY time DESC LIMIT 0,1
+            """;
+
+            var reader = await command.ExecuteReaderAsync();
+            if(!reader.Read())
+                return 0;
+
+            return reader.GetInt64(0);
+        }
+    }
+
+    public async Task<long> GetEarliestCandleTime(string symbolNameAndTime)
+    {
+        await CheckConnection();
+
+        if(! await CheckTableExists(symbolNameAndTime))
+        {
+            Console.WriteLine($"Table {symbolNameAndTime} does not exist. Creating table");
+            await CreateCandleTable(symbolNameAndTime);
+            return 0;
+        }
+
+        using(var command = _connection.CreateCommand())
+        {
+            command.CommandText =
+            $"""
+                SELECT time FROM {symbolNameAndTime} ORDER BY time ASC LIMIT 0,1
             """;
 
             var reader = await command.ExecuteReaderAsync();

@@ -19,28 +19,32 @@ public class BinanceService : IExternalAPIService
 
     private readonly struct ApiRequest
     {
-        public ApiRequest(string symbol, long startTime, long endTime, bool isMostRecent)
+        public ApiRequest(string symbol, long startTime, bool isMostRecent)
         {
             Symbol = symbol;
             StartTime = startTime;
-            EndTime = endTime;
             IsMostRecentCandles = isMostRecent;
         }
 
         public string Symbol { get; }
         public long StartTime { get; }
-        public long EndTime { get; }
         public bool IsMostRecentCandles { get; }
 
-        public override string ToString() => $"ApiRequest for symbol: {Symbol} start time: {StartTime} end time: {EndTime}";
+        public override string ToString() => $"ApiRequest for symbol: {Symbol} start time: {StartTime}";
     }
 
     private static readonly int MSECONDS_IN_HOUR = 3_600_000;
     private static readonly int MSECONDS_IN_MINUTE = 60_000;
     // TODO update this limit rate from API regularly
-    private static int _binanceCandleLimitPerRequest = 1500;
+    private static int _binanceCandleLimitPerRequest = 1000;
 
-    private static IDictionary<string, long> _activeSymbols;
+    // UNIX timestamp to target towards for earliest candle
+    // initially set to 01/01/2023 00:00hrs
+    private static long _firstCandleTimeTarget = 1_672_495_200_000;
+
+    // _activeSymbols provides in memory data of the most recent and oldest candles
+    // long[0] == earliest candle time, long[1] == most recent candle time
+    private static IDictionary<string, long[]> _activeSymbols;
 
     private static readonly string _binanceUrl = "https://api3.binance.com/api/v3";
     // `${klineEndpoint}?symbol=${s}&interval=${timeFrame}&limit=${API_KLINE_LIMIT}`
@@ -72,11 +76,12 @@ public class BinanceService : IExternalAPIService
     {
         await StartupActivateSymbols();
         WebSocketLoop();
+        UpdateHistoricalCandles();
     }
 
     private async Task StartupActivateSymbols()
     {
-        _activeSymbols = new Dictionary<string, long>();
+        _activeSymbols = new Dictionary<string, long[]>();
 
         string[] symbolNames = await _symbolRepository.GetAllActiveSymbolNames();
         for(int i = 0; i < symbolNames.Length; i++)
@@ -95,17 +100,17 @@ public class BinanceService : IExternalAPIService
         _binanceWebSocketUrl += $"{symbol.ToLower()}@kline_1m";
 
         // get last candle time from db
-        long lastCandleTime = await _candleRepository.GetLastCandleTime(symbol+'m');
-        _activeSymbols.Add(symbol, lastCandleTime);
+        long mostRecentCandleTime = await _candleRepository.GetMostRecentCandleTime(symbol+'m');
+        long earliestCandleTime = await _candleRepository.GetEarliestCandleTime(symbol+'m');
+        _activeSymbols.Add(symbol, new long[2] {earliestCandleTime, mostRecentCandleTime});
 
         _resetWebsocket = !isStartup;
     }
 
-    public async Task<List<Candle>?> GetCandlesAsync(string symbol, long startTime = 0, long endTime = 0)
+    public async Task<List<Candle>?> GetCandlesAsync(string symbol, long startTime = 0)
     {
         string requestUrl = _binanceUrl + $"/klines?symbol={symbol}&interval=1m&limit={_binanceCandleLimitPerRequest}";
         if(startTime > 0) requestUrl += $"&startTime={startTime}";
-        if(endTime > 0) requestUrl += $"&endTime={endTime}";
 
         HttpClient client = new();        
         HttpResponseMessage response = await client.GetAsync(requestUrl);
@@ -170,7 +175,7 @@ public class BinanceService : IExternalAPIService
     private async void AddCandle(JToken candleData)
     {
         string symbol = (string)candleData["s"];
-        long lastCandleTime = _activeSymbols[(string)candleData["s"]];
+        long lastCandleTime = _activeSymbols[(string)candleData["s"]][1];
         long currentCandleTime = (long)candleData["t"];
 
         Console.WriteLine($"Adding candle from websocket {symbol} last candle time: {lastCandleTime} current time: {currentCandleTime}");
@@ -186,14 +191,16 @@ public class BinanceService : IExternalAPIService
                 Volume = (decimal)candleData["v"]
             };
             await _candleRepository.InsertOneCandle(symbol + 'm', newCandle);
-            _activeSymbols[symbol] = currentCandleTime;
+            _activeSymbols[symbol][1] = currentCandleTime;
+            if(_activeSymbols[symbol][0] == 0)
+                _activeSymbols[symbol][0] = currentCandleTime;
         }
         else
         {
             Console.WriteLine($"Last candle not in time series. Current time: {currentCandleTime} Previous: {lastCandleTime}");
             Console.WriteLine($"There are {(currentCandleTime - lastCandleTime) / 60_000} candles to be updated");
             Console.WriteLine($"Retrieving max limit of candles that are missing..");
-            AddRequestToQue(Priority.High, symbol, lastCandleTime + MSECONDS_IN_MINUTE, 0, true);
+            AddRequestToQue(Priority.High, symbol, lastCandleTime + MSECONDS_IN_MINUTE, true);
         }
     }
 
@@ -205,9 +212,9 @@ public class BinanceService : IExternalAPIService
         _resetWebsocket = false;
     }
 
-    private void AddRequestToQue(Priority priority, string symbol, long startTime, long endTime, bool isMostRecentCandles)
+    private void AddRequestToQue(Priority priority, string symbol, long startTime, bool isMostRecentCandles)
     {
-        ApiRequest request = new(symbol, startTime, endTime, isMostRecentCandles);
+        ApiRequest request = new(symbol, startTime, isMostRecentCandles);
         Console.WriteLine($"Adding request to que {request}");
         _apiQue.Enqueue(request, priority);
         if(!_queIsProcessing)
@@ -223,20 +230,23 @@ public class BinanceService : IExternalAPIService
             Console.WriteLine($"Processing que item with {_apiQue.Count} items");
             ApiRequest request = _apiQue.Dequeue();
             Console.WriteLine($"Process que request: {request}");
-            var candles = await GetCandlesAsync(request.Symbol, request.StartTime, request.EndTime);
+            var candles = await GetCandlesAsync(request.Symbol, request.StartTime);
             
             if(candles == null) continue;
 
             // if last candle is not closed, remove it
             if(request.IsMostRecentCandles)
-            {
                 // remove unclosed candle
                 candles.RemoveAt(candles.Count - 1);
-                _activeSymbols[request.Symbol] = candles[candles.Count-1].Time;
-            }
             
             int count = await _candleRepository.InsertCandles(request.Symbol + 'm', candles);
             
+            if(request.IsMostRecentCandles)
+                _activeSymbols[request.Symbol][1] = candles[^1].Time;
+            
+            if(_activeSymbols[request.Symbol][0] == 0 || !request.IsMostRecentCandles)
+                _activeSymbols[request.Symbol][0] = candles[0].Time;
+
             Console.WriteLine($"Added {count} candles to db");
 
             // wait 2000ms between requests
@@ -245,7 +255,25 @@ public class BinanceService : IExternalAPIService
         _queIsProcessing = false;
         Console.WriteLine("Ending que");
     }
+
+    // Updater to request historical candle data
+    private async void UpdateHistoricalCandles()
+    {
+        while(true)
+        {
+            foreach(KeyValuePair<string, long[]> symbol in _activeSymbols)
+            {
+                if(symbol.Value[0] == 0 || symbol.Value[0] > _firstCandleTimeTarget && _apiQue.Count < 1024)
+                {
+                    long firstCandleTime = symbol.Value[0] - (_binanceCandleLimitPerRequest * MSECONDS_IN_MINUTE);
+                    AddRequestToQue(Priority.Low, symbol.Key, firstCandleTime, false);
+                }
+
+                await Task.Delay(1000);
+                int validatedCandleCount = await _candleRepository.ValidateCandleTimeSeries(symbol.Key);
+                Console.WriteLine($"Checking timeseries data for {symbol.Key} : {validatedCandleCount}");
+            }
+        }
+    }
 }
 
-// TODO
-// 3. Start an API updater to load earlier candles

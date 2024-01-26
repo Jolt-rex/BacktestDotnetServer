@@ -11,14 +11,24 @@ public class CandleRepository : ICandleRepository
         _dbConnection = dbConnection;
     }
 
+    public async Task<int> ValidateCandleTimeSeries(string symbol)
+    {
+        return await _dbConnection.ValidateCandleTimeSeries(symbol);
+    }
+
     public async Task<List<Candle>?> GetCandlesAsync(string symbol, char interval, long startTime = 0, long endTime = 0)
     {
         return await _dbConnection.GetCandles(symbol, interval, startTime, endTime);
     }
 
-    public async Task<long> GetLastCandleTime(string symbol)
+    public async Task<long> GetMostRecentCandleTime(string symbol)
     {
-        return await _dbConnection.GetLatestCandleTime(symbol);
+        return await _dbConnection.GetMostRecentCandleTime(symbol);
+    }
+
+    public async Task<long> GetEarliestCandleTime(string symbol)
+    {
+        return await _dbConnection.GetEarliestCandleTime(symbol);
     }
 
     public async Task<int> InsertCandles(string symbolNameAndTime, List<Candle> candles)
