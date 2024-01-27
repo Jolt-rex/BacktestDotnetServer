@@ -30,7 +30,7 @@ public class BinanceService : IExternalAPIService
         public long StartTime { get; }
         public bool IsMostRecentCandles { get; }
 
-        public override string ToString() => $"ApiRequest for symbol: {Symbol} start time: {StartTime}";
+        public override string ToString() => $"ApiRequest for symbol: {Symbol} start time: {StartTime} is most recent {IsMostRecentCandles}";
     }
 
     private static readonly int MSECONDS_IN_HOUR = 3_600_000;
@@ -44,7 +44,8 @@ public class BinanceService : IExternalAPIService
 
     // _activeSymbols provides in memory data of the most recent and oldest candles
     // long[0] == earliest candle time, long[1] == most recent candle time
-    private static IDictionary<string, long[]> _activeSymbols;
+    private readonly IDictionary<string, long[]> _activeSymbols;
+    private readonly HashSet<string> _queuedSymbols;
 
     private static readonly string _binanceUrl = "https://api3.binance.com/api/v3";
     // `${klineEndpoint}?symbol=${s}&interval=${timeFrame}&limit=${API_KLINE_LIMIT}`
@@ -68,6 +69,8 @@ public class BinanceService : IExternalAPIService
         _candleRepository = candleRepository;
 
         _apiQue = new PriorityQueue<ApiRequest, Priority>();
+        _activeSymbols = new Dictionary<string, long[]>();
+        _queuedSymbols = new();
 
         Startup();
     }
@@ -81,7 +84,6 @@ public class BinanceService : IExternalAPIService
 
     private async Task StartupActivateSymbols()
     {
-        _activeSymbols = new Dictionary<string, long[]>();
 
         string[] symbolNames = await _symbolRepository.GetAllActiveSymbolNames();
         for(int i = 0; i < symbolNames.Length; i++)
@@ -197,10 +199,8 @@ public class BinanceService : IExternalAPIService
         }
         else
         {
-            Console.WriteLine($"Last candle not in time series. Current time: {currentCandleTime} Previous: {lastCandleTime}");
             Console.WriteLine($"There are {(currentCandleTime - lastCandleTime) / 60_000} candles to be updated");
-            Console.WriteLine($"Retrieving max limit of candles that are missing..");
-            AddRequestToQue(Priority.High, symbol, lastCandleTime + MSECONDS_IN_MINUTE, true);
+            await AddRequestToQue(Priority.High, symbol, lastCandleTime + MSECONDS_IN_MINUTE, true);
         }
     }
 
@@ -212,22 +212,27 @@ public class BinanceService : IExternalAPIService
         _resetWebsocket = false;
     }
 
-    private void AddRequestToQue(Priority priority, string symbol, long startTime, bool isMostRecentCandles)
+    private async Task AddRequestToQue(Priority priority, string symbol, long startTime, bool isMostRecentCandles)
     {
         ApiRequest request = new(symbol, startTime, isMostRecentCandles);
         Console.WriteLine($"Adding request to que {request}");
         _apiQue.Enqueue(request, priority);
         if(!_queIsProcessing)
-            ProcessQue();
+            _ = ProcessQue();
     }
 
     private async Task ProcessQue()
     {
         _queIsProcessing = true;
-        Console.WriteLine($"Starting que");
+        // Console.WriteLine($"Starting que");
         while(_apiQue.Count > 0)
         {
             Console.WriteLine($"Processing que item with {_apiQue.Count} items");
+            Console.WriteLine("Current que items");
+            foreach(var apiRequest in _apiQue.UnorderedItems)
+            {
+                Console.WriteLine(apiRequest);
+            }
             ApiRequest request = _apiQue.Dequeue();
             Console.WriteLine($"Process que request: {request}");
             var candles = await GetCandlesAsync(request.Symbol, request.StartTime);
@@ -247,6 +252,8 @@ public class BinanceService : IExternalAPIService
             if(_activeSymbols[request.Symbol][0] == 0 || !request.IsMostRecentCandles)
                 _activeSymbols[request.Symbol][0] = candles[0].Time;
 
+            _queuedSymbols.Remove(request.Symbol);
+
             Console.WriteLine($"Added {count} candles to db");
 
             // wait 2000ms between requests
@@ -263,17 +270,20 @@ public class BinanceService : IExternalAPIService
         {
             foreach(KeyValuePair<string, long[]> symbol in _activeSymbols)
             {
-                if(symbol.Value[0] == 0 || symbol.Value[0] > _firstCandleTimeTarget && _apiQue.Count < 1024)
+                if(symbol.Value[0] > _firstCandleTimeTarget && !_queuedSymbols.Contains(symbol.Key) && _apiQue.Count < 1024)
                 {
                     long firstCandleTime = symbol.Value[0] - (_binanceCandleLimitPerRequest * MSECONDS_IN_MINUTE);
-                    AddRequestToQue(Priority.Low, symbol.Key, firstCandleTime, false);
+                    _queuedSymbols.Add(symbol.Key);
+                    _ = AddRequestToQue(Priority.Low, symbol.Key, firstCandleTime, false);
                 }
 
-                await Task.Delay(1000);
                 int validatedCandleCount = await _candleRepository.ValidateCandleTimeSeries(symbol.Key);
                 Console.WriteLine($"Checking timeseries data for {symbol.Key} : {validatedCandleCount}");
             }
+            await Task.Delay(5000);
         }
     }
 }
 
+// TODO
+// 1. Fix bug where multiple instances of historical candles are being queued, using same startTime and symbol
