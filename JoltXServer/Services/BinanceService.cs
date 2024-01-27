@@ -248,11 +248,12 @@ public class BinanceService : IExternalAPIService
             
             if(request.IsMostRecentCandles)
                 _activeSymbols[request.Symbol][1] = candles[^1].Time;
+            else
+                _queuedSymbols.Remove(request.Symbol);
             
             if(_activeSymbols[request.Symbol][0] == 0 || !request.IsMostRecentCandles)
                 _activeSymbols[request.Symbol][0] = candles[0].Time;
 
-            _queuedSymbols.Remove(request.Symbol);
 
             Console.WriteLine($"Added {count} candles to db");
 
@@ -285,5 +286,4 @@ public class BinanceService : IExternalAPIService
     }
 }
 
-// TODO
-// 1. Fix bug where multiple instances of historical candles are being queued, using same startTime and symbol
+// TODOs
