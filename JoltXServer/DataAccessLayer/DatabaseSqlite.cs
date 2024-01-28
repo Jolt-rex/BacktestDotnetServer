@@ -328,7 +328,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
         }
     }
 
-    public async Task CreateCandleTable(string symbolName)
+    public async Task CreateCandleTable(string symbol)
     {
         await CheckConnection();
 
@@ -336,7 +336,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
         {
             command.CommandText =
             $"""
-                CREATE TABLE IF NOT EXISTS {symbolName}
+                CREATE TABLE IF NOT EXISTS {symbol}
                 (time INTEGER PRIMARY KEY,
                 open VARCHAR(20),
                 high VARCHAR(20),
@@ -356,9 +356,9 @@ public class DatabaseSqlite : IDatabaseSqlite{
     {
         await CheckConnection();
 
-        if(! await CheckTableExists(symbol + 'm'))
+        if(! await CheckTableExists(symbol))
         {
-            Console.WriteLine($"Table {symbol + 'm'} does not exist.");
+            Console.WriteLine($"Table {symbol} does not exist.");
             return -1;
         }
 
@@ -368,7 +368,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
         {
             command.CommandText =
             $"""
-                SELECT * FROM {symbol + 'm'} 
+                SELECT * FROM {symbol} 
             """;
 
             var reader = await command.ExecuteReaderAsync();
@@ -388,7 +388,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
             }
         }
 
-        if(CandleTimeSeriesValidator.Validate('m', candles))
+        if(CandleTimeSeriesValidator.Validate(candles))
             return candles.Count;
 
         return -1;
@@ -414,10 +414,10 @@ public class DatabaseSqlite : IDatabaseSqlite{
             return -1;
         }
     }
-    public async Task<int> InsertCandles(string symbolNameAndTime, List<Candle> candles)
+    public async Task<int> InsertCandles(string symbol, List<Candle> candles)
     {
         // validate time series data
-        if(!CandleTimeSeriesValidator.Validate(symbolNameAndTime[^1], candles))
+        if(!CandleTimeSeriesValidator.Validate(candles))
             return -1;
 
         await CheckConnection();
@@ -433,7 +433,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
                     {
                         command.CommandText = 
                         $"""
-                            INSERT INTO {symbolNameAndTime} (time,open,high,low,close,volume) 
+                            INSERT INTO {symbol} (time,open,high,low,close,volume) 
                             VALUES ({candles[i].Time}, '{candles[i].Open}', '{candles[i].High}', '{candles[i].Low}', '{candles[i].Close}', {candles[i].Volume});
                         """;
                         await command.ExecuteNonQueryAsync();
@@ -454,14 +454,14 @@ public class DatabaseSqlite : IDatabaseSqlite{
     // returns earliest candle open time in database for given symbol
     // if table does not exist, table will be created and return 0
     // if table is empty we return 0
-    public async Task<long> GetMostRecentCandleTime(string symbolNameAndTime)
+    public async Task<long> GetMostRecentCandleTime(string symbol)
     {
         await CheckConnection();
 
-        if(! await CheckTableExists(symbolNameAndTime))
+        if(! await CheckTableExists(symbol))
         {
-            Console.WriteLine($"Table {symbolNameAndTime} does not exist. Creating table");
-            await CreateCandleTable(symbolNameAndTime);
+            Console.WriteLine($"Table {symbol} does not exist. Creating table");
+            await CreateCandleTable(symbol);
             return 0;
         }
 
@@ -469,7 +469,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
         {
             command.CommandText =
             $"""
-                SELECT time FROM {symbolNameAndTime} ORDER BY time DESC LIMIT 0,1
+                SELECT time FROM {symbol} ORDER BY time DESC LIMIT 0,1
             """;
 
             var reader = await command.ExecuteReaderAsync();
@@ -480,14 +480,14 @@ public class DatabaseSqlite : IDatabaseSqlite{
         }
     }
 
-    public async Task<long> GetEarliestCandleTime(string symbolNameAndTime)
+    public async Task<long> GetEarliestCandleTime(string symbol)
     {
         await CheckConnection();
 
-        if(! await CheckTableExists(symbolNameAndTime))
+        if(! await CheckTableExists(symbol))
         {
-            Console.WriteLine($"Table {symbolNameAndTime} does not exist. Creating table");
-            await CreateCandleTable(symbolNameAndTime);
+            Console.WriteLine($"Table {symbol} does not exist. Creating table");
+            await CreateCandleTable(symbol);
             return 0;
         }
 
@@ -495,7 +495,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
         {
             command.CommandText =
             $"""
-                SELECT time FROM {symbolNameAndTime} ORDER BY time ASC LIMIT 0,1
+                SELECT time FROM {symbol} ORDER BY time ASC LIMIT 0,1
             """;
 
             var reader = await command.ExecuteReaderAsync();
@@ -506,15 +506,13 @@ public class DatabaseSqlite : IDatabaseSqlite{
         }
     }
 
-    public async Task<List<Candle>?> GetCandles(string symbol, char interval, long startTime, long endTime)
+    public async Task<List<Candle>?> GetCandles(string symbol, long startTime = 0, long endTime = 0)
     {
         await CheckConnection();
 
-        string symbolAndInterval = symbol + interval;
-
-        if(! await CheckTableExists(symbolAndInterval))
+        if(! await CheckTableExists(symbol))
         {
-            Console.WriteLine($"Table {symbolAndInterval} does not exist.");
+            Console.WriteLine($"Table {symbol} does not exist.");
             return null;
         }
 
@@ -522,11 +520,17 @@ public class DatabaseSqlite : IDatabaseSqlite{
 
         using(var command = _connection.CreateCommand())
         {
+            string times = "";
+            if(startTime != 0)
+                times = $" WHERE time >= {startTime}";
+            if(endTime != 0)
+                times += $" AND time <= {endTime}";
+
             command.CommandText =
             $"""
-                SELECT * FROM {symbolAndInterval}
-                WHERE time >= {startTime}
-                AND time <= {endTime} 
+                SELECT * FROM {symbol}
+                {times}
+                ASC
             """;
 
             var reader = await command.ExecuteReaderAsync();

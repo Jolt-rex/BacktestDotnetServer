@@ -20,10 +20,10 @@ public interface IDatabaseSqlite
 
     // CANDLES
     public Task<int> ValidateCandleTimeSeries(string symbol);
-    public Task<int> InsertOneCandle(string symbolNameAndTime, Candle candle);
-    public Task<int> InsertCandles(string symbolNameAndTime, List<Candle> candles);
+    public Task<int> InsertOneCandle(string symbol, Candle candle);
+    public Task<int> InsertCandles(string symbol, List<Candle> candles);
     public Task<long> GetMostRecentCandleTime(string symbolName);
     public Task<long> GetEarliestCandleTime(string symbolName);
-    public Task<List<Candle>?> GetCandles(string symbol, char interval, long startTime, long endTime);
+    public Task<List<Candle>?> GetCandles(string symbol, long startTime, long endTime);
     // END CANDLES
 }

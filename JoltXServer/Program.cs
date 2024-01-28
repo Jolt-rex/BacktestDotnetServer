@@ -26,9 +26,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// await BinanceService.UpdateCandlesAsync("BTCUSDT", 1692277200000);
-
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseAuthorization();
 

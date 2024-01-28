@@ -102,8 +102,8 @@ public class BinanceService : IExternalAPIService
         _binanceWebSocketUrl += $"{symbol.ToLower()}@kline_1m";
 
         // get last candle time from db
-        long mostRecentCandleTime = await _candleRepository.GetMostRecentCandleTime(symbol+'m');
-        long earliestCandleTime = await _candleRepository.GetEarliestCandleTime(symbol+'m');
+        long mostRecentCandleTime = await _candleRepository.GetMostRecentCandleTime(symbol);
+        long earliestCandleTime = await _candleRepository.GetEarliestCandleTime(symbol);
         _activeSymbols.Add(symbol, new long[2] {earliestCandleTime, mostRecentCandleTime});
 
         _resetWebsocket = !isStartup;
@@ -192,7 +192,7 @@ public class BinanceService : IExternalAPIService
                 Close = (decimal)candleData["c"],
                 Volume = (decimal)candleData["v"]
             };
-            await _candleRepository.InsertOneCandle(symbol + 'm', newCandle);
+            await _candleRepository.InsertOneCandle(symbol, newCandle);
             _activeSymbols[symbol][1] = currentCandleTime;
             if(_activeSymbols[symbol][0] == 0)
                 _activeSymbols[symbol][0] = currentCandleTime;
@@ -244,7 +244,7 @@ public class BinanceService : IExternalAPIService
                 // remove unclosed candle
                 candles.RemoveAt(candles.Count - 1);
             
-            int count = await _candleRepository.InsertCandles(request.Symbol + 'm', candles);
+            int count = await _candleRepository.InsertCandles(request.Symbol, candles);
             
             if(request.IsMostRecentCandles)
                 _activeSymbols[request.Symbol][1] = candles[^1].Time;
@@ -278,8 +278,9 @@ public class BinanceService : IExternalAPIService
                     _ = AddRequestToQue(Priority.Low, symbol.Key, firstCandleTime, false);
                 }
 
-                int validatedCandleCount = await _candleRepository.ValidateCandleTimeSeries(symbol.Key);
-                Console.WriteLine($"Checking timeseries data for {symbol.Key} : {validatedCandleCount}");
+                
+                // int validatedCandleCount = await _candleRepository.ValidateCandleTimeSeries(symbol.Key);
+                // Console.WriteLine($"Checking timeseries data for {symbol.Key} : {validatedCandleCount}");
             }
             await Task.Delay(5000);
         }

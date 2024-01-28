@@ -6,9 +6,12 @@ namespace JoltXServer.Repositories;
 public class CandleRepository : ICandleRepository
 {
     private IDatabaseSqlite _dbConnection;
+
+    private readonly Dictionary<string, List<Candle>?> _cachedCandles;
     public CandleRepository(IDatabaseSqlite dbConnection)
     {
         _dbConnection = dbConnection;
+        _cachedCandles = new();
     }
 
     public async Task<int> ValidateCandleTimeSeries(string symbol)
@@ -18,7 +21,8 @@ public class CandleRepository : ICandleRepository
 
     public async Task<List<Candle>?> GetCandlesAsync(string symbol, char interval, long startTime = 0, long endTime = 0)
     {
-        return await _dbConnection.GetCandles(symbol, interval, startTime, endTime);
+        //if()
+        return await _dbConnection.GetCandles(symbol, startTime, endTime);
     }
 
     public async Task<long> GetMostRecentCandleTime(string symbol)

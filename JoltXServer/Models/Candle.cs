@@ -25,9 +25,9 @@ public struct Candle
 // returns true if time series has a consistent interval or is empty
 public static class CandleTimeSeriesValidator
 {
-    public static bool Validate(char interval, List<Candle> candles)
+    public static bool Validate(List<Candle> candles)
     {
-        int intervalInMilliSeconds = interval == 'h' ? 3_600_000 : 60_000;
+        int intervalInMilliSeconds = 60_000;
         long previousTime = candles[0].Time;
 
         for(int i = 1; i < candles.Count; i++)

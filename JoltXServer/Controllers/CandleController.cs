@@ -26,10 +26,10 @@ public class CandleController : ControllerBase
 
 
     // TODO setup intervals 1M 5M 15M 30M 1H 2H 4H 6H 8H 12H 1D 1W 
-    [HttpGet("{symbol}/{interval}/{startTime:long}/{endTime:long}")]
+    [HttpGet("{symbol}/{interval}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<string[]>> GetCandles(string symbol, string interval, long startTime, long endTime)
+    public async Task<ActionResult<string[]>> GetCandles(string symbol, string interval, long startTime = 0, long endTime = 0)
     {
         var candles = await _candleRepository.GetCandlesAsync(symbol, 'm', startTime, endTime);
 
