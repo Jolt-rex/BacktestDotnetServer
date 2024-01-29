@@ -506,7 +506,7 @@ public class DatabaseSqlite : IDatabaseSqlite{
         }
     }
 
-    public async Task<List<Candle>?> GetCandles(string symbol, long startTime = 0, long endTime = 0)
+    public async Task<List<Candle>?> GetCandles(string symbol, long startTime = 0, long endTime = 0, int limit = 1000)
     {
         await CheckConnection();
 
@@ -521,16 +521,20 @@ public class DatabaseSqlite : IDatabaseSqlite{
         using(var command = _connection.CreateCommand())
         {
             string times = "";
+            string limitCount = "";
             if(startTime != 0)
-                times = $" WHERE time >= {startTime}";
+                times = $"WHERE time >= {startTime}";
             if(endTime != 0)
                 times += $" AND time <= {endTime}";
+            if(limit != 0)
+                limitCount = $"LIMIT {limit}";
 
             command.CommandText =
             $"""
                 SELECT * FROM {symbol}
                 {times}
                 ASC
+                {limitCount}
             """;
 
             var reader = await command.ExecuteReaderAsync();

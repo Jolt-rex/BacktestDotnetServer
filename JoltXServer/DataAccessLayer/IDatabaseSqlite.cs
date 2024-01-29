@@ -24,6 +24,6 @@ public interface IDatabaseSqlite
     public Task<int> InsertCandles(string symbol, List<Candle> candles);
     public Task<long> GetMostRecentCandleTime(string symbolName);
     public Task<long> GetEarliestCandleTime(string symbolName);
-    public Task<List<Candle>?> GetCandles(string symbol, long startTime, long endTime);
+    public Task<List<Candle>?> GetCandles(string symbol, long startTime, long endTime, int limit);
     // END CANDLES
 }

@@ -19,46 +19,44 @@ public class CandleRepository : ICandleRepository
         return await _dbConnection.ValidateCandleTimeSeries(symbol);
     }
 
-    // uses in memory Dictionary <symbolInterval, List<Candle> to cache candles from db for faster response
+    // TODO use in memory Dictionary <symbolInterval, List<Candle> to cache candles from db for faster response
     // eg. <"BTCUSDT1M" : [Candle1, Candle2, Candle3]>
-    // Request with a limit of 0 returns all candles
-    // If candle is not currently in the _cachedCandles Dictionary, they are added first
     public async Task<List<Candle>?> GetCandlesAsync(string symbol, string interval = "", long startTime = 0, long endTime = 0, int limit = 1000)
     {
-        // TODO 
-        // implement cached candles in memory to increase performance
         
         // 1M and 1H candles in memory and Get ability to retrieve 1M 5M 15M 30M 1H 2H 4H 6H 8H 12H 1D 1W
-        string symbolInterval = symbol + interval;
+        return await _dbConnection.GetCandles(symbol, startTime, endTime, limit);
 
-        if(!await AddCandlesToCache(symbol, interval)) return null;
+        // string symbolInterval = symbol + interval;
 
-        int count = _cachedCandles[symbolInterval].Count;
-        if((startTime == 0 && endTime == 0 && limit == 0) || limit > count)
-            return _cachedCandles[symbolInterval];
+        // if(!await AddCandlesToCache(symbol, interval)) return null;
 
-        if(startTime == 0 && endTime == 0)
-        {
-            int startIndex = Math.Max(0, count - limit - 1);
-            int candleCountToReturn = startIndex + limit;
-            if(candleCountToReturn >= count)
-                candleCountToReturn = count - startIndex;
-            return _cachedCandles[symbolInterval]?.GetRange(startIndex, candleCountToReturn);
-        }
+        // if(startTime == 0 && endTime == 0 && limit == 0)
+        //     return _cachedCandles[symbolInterval];
+
+        // int count = _cachedCandles[symbolInterval].Count;
+        // if(startTime == 0 && endTime == 0)
+        // {
+        //     int startIndex = Math.Max(0, count - limit - 1);
+        //     int candleCountToReturn = limit;
+        //     if(candleCountToReturn > count - startIndex - 1)
+        //         candleCountToReturn = count - startIndex;
+        //     return _cachedCandles[symbolInterval]?.GetRange(startIndex, candleCountToReturn);
+        // }
         
 
-        long lastTimeCandles = _cachedCandles[symbolInterval][^1].Time;
-        long startTimeCandles = _cachedCandles[symbolInterval][0].Time;
+        // long lastTimeCandles = _cachedCandles[symbolInterval][^1].Time;
+        // long startTimeCandles = _cachedCandles[symbolInterval][0].Time;
         
         
-        return _cachedCandles[symbolInterval];
+        // return _cachedCandles[symbolInterval];
     }
 
     private async Task<bool> AddCandlesToCache(string symbol, string interval)
     {
         if(!_cachedCandles.ContainsKey(symbol + interval))
         {
-            List<Candle>? candles = await _dbConnection.GetCandles(symbol,0,0);
+            List<Candle>? candles = await _dbConnection.GetCandles(symbol,0,0,0);
             if(candles == null || candles.Count == 0) return false;
             _cachedCandles.Add(symbol+interval, candles);
         }

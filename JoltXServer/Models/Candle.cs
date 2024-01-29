@@ -46,7 +46,7 @@ public class CandleConverter : JsonConverter
 {
     public override bool CanConvert(Type objectType)
     {
-        return (objectType == typeof(Candle));
+        return objectType == typeof(Candle);
     }
 
     public override object ReadJson(JsonReader reader, Type objectType, object? existingValue, JsonSerializer serializer)
@@ -72,11 +72,11 @@ public class CandleConverter : JsonConverter
         JArray ja = new();
         Candle candle = (Candle)value;
         ja.Add(candle.Time);
-        ja.Add(candle.Open);
-        ja.Add(candle.High);
-        ja.Add(candle.Low);
-        ja.Add(candle.Close);
-        ja.Add(candle.Volume);
+        ja.Add(candle.Open.ToString());
+        ja.Add(candle.High.ToString());
+        ja.Add(candle.Low.ToString());
+        ja.Add(candle.Close.ToString());
+        ja.Add(candle.Volume.ToString());
         ja.WriteTo(writer);
     }
 }

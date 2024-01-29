@@ -5,6 +5,7 @@ using JoltXServer.Repositories;
 using JoltXServer.DataAccessLayer;
 using JoltXServer.Models;
 using System.Linq.Expressions;
+using Newtonsoft.Json;
 
 namespace Jolt_X.Controllers;
 
@@ -29,11 +30,14 @@ public class CandleController : ControllerBase
     [HttpGet("{symbol}/{interval}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<string[]>> GetCandles(string symbol, string interval, long startTime = 0, long endTime = 0, int limit = 1000)
+    public async Task<ActionResult<string[]>> GetCandles(string symbol, string interval, long startTime = 0, long endTime = 0)
     {
-        var candles = await _candleRepository.GetCandlesAsync(symbol, interval, startTime, endTime, limit);
+        List<Candle>? candles = await _candleRepository.GetCandlesAsync(symbol, interval, startTime, endTime, 1000);
 
-        return Ok(candles);
+        if(candles == null || candles.Count == 0)
+            return NotFound();
+
+        return Ok(JsonConvert.SerializeObject(candles));
     }
 
     // Creates request to BinanceService to retrieve 1min candles from last candle in database 
