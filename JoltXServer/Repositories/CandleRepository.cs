@@ -32,17 +32,23 @@ public class CandleRepository : ICandleRepository
         string symbolInterval = symbol + interval;
 
         if(!await AddCandlesToCache(symbol, interval)) return null;
-        
-        if(limit == 0)
-            return _cachedCandles[symbolInterval];
 
         int count = _cachedCandles[symbolInterval].Count;
-        int startIndex;
-        int endIndex;
+        if((startTime == 0 && endTime == 0 && limit == 0) || limit > count)
+            return _cachedCandles[symbolInterval];
+
+        if(startTime == 0 && endTime == 0)
+        {
+            int startIndex = Math.Max(0, count - limit - 1);
+            int candleCountToReturn = startIndex + limit;
+            if(candleCountToReturn >= count)
+                candleCountToReturn = count - startIndex;
+            return _cachedCandles[symbolInterval]?.GetRange(startIndex, candleCountToReturn);
+        }
+        
+
         long lastTimeCandles = _cachedCandles[symbolInterval][^1].Time;
         long startTimeCandles = _cachedCandles[symbolInterval][0].Time;
-        if(startTime == 0 && endTime == 0)
-            return _cachedCandles[symbolInterval]?.GetRange(count - limit - 1, limit);
         
         
         return _cachedCandles[symbolInterval];
