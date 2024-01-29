@@ -286,5 +286,3 @@ public class BinanceService : IExternalAPIService
         }
     }
 }
-
-// TODOs

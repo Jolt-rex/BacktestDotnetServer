@@ -29,9 +29,9 @@ public class CandleController : ControllerBase
     [HttpGet("{symbol}/{interval}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<string[]>> GetCandles(string symbol, string interval, long startTime = 0, long endTime = 0)
+    public async Task<ActionResult<string[]>> GetCandles(string symbol, string interval, long startTime = 0, long endTime = 0, int limit = 1000)
     {
-        var candles = await _candleRepository.GetCandlesAsync(symbol, 'm', startTime, endTime);
+        var candles = await _candleRepository.GetCandlesAsync(symbol, interval, startTime, endTime, limit);
 
         return Ok(candles);
     }
