@@ -17,6 +17,8 @@ public class CandleController : ControllerBase
     private ISymbolRepository _symbolRepository;
     private IExternalAPIService _binanceService;
 
+    private static readonly int requestLimit = 1000;
+
 
     public CandleController(ISymbolRepository symbolRepository, ICandleRepository candleRepository, IExternalAPIService binanceService)
     {
@@ -32,7 +34,7 @@ public class CandleController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<string[]>> GetCandles(string symbol, string interval, long startTime = 0, long endTime = 0)
     {
-        List<Candle>? candles = await _candleRepository.GetCandlesAsync(symbol, interval, startTime, endTime, 1000);
+        List<Candle>? candles = await _candleRepository.GetCandlesAsync(symbol, interval, startTime, endTime, requestLimit);
 
         if(candles == null || candles.Count == 0)
             return NotFound();

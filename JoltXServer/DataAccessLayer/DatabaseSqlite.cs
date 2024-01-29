@@ -5,8 +5,9 @@ using JoltXServer.Repositories;
 using Microsoft.Data.Sqlite;
 using System.Data;
 
-public class DatabaseSqlite : IDatabaseSqlite{
-
+public class DatabaseSqlite : IDatabaseSqlite
+{
+    private static readonly int MSECONDS_IN_MINUTE = 60_000;
     private static readonly string _pathToDB = Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile) + "\\.JoltXServer\\db\\cryptocurrencies.sqlite";
     private readonly SqliteConnection _connection;
     
@@ -516,14 +517,19 @@ public class DatabaseSqlite : IDatabaseSqlite{
             return null;
         }
 
+        if(startTime == 0)
+        {
+            long currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            long currentMinute = (currentTime - DateTimeOffset.UtcNow.Second) * 1000;
+            startTime = currentMinute - (limit * MSECONDS_IN_MINUTE);
+        }
+
         List<Candle> candles = new();
 
         using(var command = _connection.CreateCommand())
         {
-            string times = "";
             string limitCount = "";
-            if(startTime != 0)
-                times = $"WHERE time >= {startTime}";
+            string times = $"WHERE time >= {startTime}";
             if(endTime != 0)
                 times += $" AND time <= {endTime}";
             if(limit != 0)
@@ -533,9 +539,11 @@ public class DatabaseSqlite : IDatabaseSqlite{
             $"""
                 SELECT * FROM {symbol}
                 {times}
-                ASC
+                ORDER BY time ASC
                 {limitCount}
             """;
+
+            Console.WriteLine(command.CommandText);
 
             var reader = await command.ExecuteReaderAsync();
 
