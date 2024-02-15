@@ -1,12 +1,11 @@
+
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using JoltXServer.Models;
 
 namespace JoltXServer.DataAccessLayer;
 
-public class UserContext : IdentityDbContext
+public class UserContext(DbContextOptions<UserContext> options) : IdentityDbContext<User>(options)
 {
-  public UserContext(DbContextOptions<UserContext> options) : base(options)
-  {
-    
-  }
 }
+
