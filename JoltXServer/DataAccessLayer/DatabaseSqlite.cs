@@ -8,7 +8,7 @@ using System.Data;
 public class DatabaseSqlite : IDatabaseSqlite
 {
     private static readonly int MSECONDS_IN_MINUTE = 60_000;
-    private static readonly string _pathToDB = Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile) + "\\.JoltXServer\\db\\cryptocurrencies.sqlite";
+    private static readonly string _pathToDB = "./db/cryptocurrencies.sqlite"; //Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile) + "/dbcryptocurrencies.sqlite";
     private readonly SqliteConnection _connection;
     
     public DatabaseSqlite()
@@ -28,7 +28,7 @@ public class DatabaseSqlite : IDatabaseSqlite
         try {
             await Connect();
             await EnableWAL();
-            //await CreateInitialTablesIfNotExist();
+            await CreateInitialTablesIfNotExist();
         } catch (Exception ex)
         {
             Console.Error.WriteLine($"Exception raised attempting database startup: {ex.Message}");

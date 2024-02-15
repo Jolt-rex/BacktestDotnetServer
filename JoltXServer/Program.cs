@@ -14,6 +14,10 @@ builder.Services.AddSingleton<ICandleRepository, CandleRepository>();
 builder.Services.AddSingleton<IExternalAPIService, BinanceService>();
 builder.Services.AddEndpointsApiExplorer();
 
+builder.Services.AddDbContext<UserController>(options => {
+  options.UseSqlServer();
+});
+
 var app = builder.Build();
 
 app.Services.GetService<IExternalAPIService>();
