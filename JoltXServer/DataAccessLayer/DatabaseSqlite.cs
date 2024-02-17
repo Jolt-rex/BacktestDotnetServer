@@ -28,7 +28,7 @@ public class DatabaseSqlite : IDatabaseSqlite
         try {
             await Connect();
             await EnableWAL();
-            await CreateInitialTablesIfNotExist();
+            // await CreateInitialTablesIfNotExist();
         } catch (Exception ex)
         {
             Console.Error.WriteLine($"Exception raised attempting database startup: {ex.Message}");
