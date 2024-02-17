@@ -6,6 +6,7 @@ using JoltXServer.DataAccessLayer;
 using JoltXServer.Models;
 using System.Linq.Expressions;
 using Newtonsoft.Json;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Jolt_X.Controllers;
 
@@ -29,7 +30,7 @@ public class CandleController : ControllerBase
 
 
     // TODO setup intervals 1M 5M 15M 30M 1H 2H 4H 6H 8H 12H 1D 1W 
-    [HttpGet("{symbol}/{interval}")]
+    [HttpGet("{symbol}/{interval}"), Authorize]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<string[]>> GetCandles(string symbol, string interval, long startTime = 0, long endTime = 0)
@@ -60,29 +61,3 @@ public class CandleController : ControllerBase
     }
 
 }
-
-
-
-// {
-//     [ApiController]
-//     [Route("api/candles")]
-//     public class CandleController : ControllerBase
-//     {
-//         private static readonly CandleModel[] Candles = new[]
-//         {
-//             new CandleModel{ time = 1, open = 1660, high = 1666, low = 1600, close = 1620, volume = 50 },
-//             new CandleModel{ time = 2, open = 1660, high = 1666, low = 1600, close = 1620, volume = 20 },
-//             new CandleModel{ time = 3, open = 1660, high = 1666, low = 1600, close = 1620, volume = 80 }
-//         };
-
-//         [HttpGet("{symbol}/{timeFrom:int}/{timeTo:int}")]
-//         public CandleModel[] Get(string symbol, int timeFrom, int timeTo)
-//         {
-//             Console.WriteLine($"{symbol} {timeFrom} {timeTo}");
-//             return Candles;
-//         }
-
-//     }
-
-
-// }

@@ -16,14 +16,14 @@ builder.Services.AddSingleton<ICandleRepository, CandleRepository>();
 builder.Services.AddSingleton<IExternalAPIService, BinanceService>();
 builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddDbContext<UserContext>(options => {
+builder.Services.AddDbContext<JoltXServer.DataAccessLayer.UserContext>(options => {
   options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
 });
 
 builder.Services.AddAuthorization();
 
 builder.Services.AddIdentityApiEndpoints<User>()
-  .AddEntityFrameworkStores<UserContext>();
+  .AddEntityFrameworkStores<JoltXServer.DataAccessLayer.UserContext>();
 
 var app = builder.Build();
 
