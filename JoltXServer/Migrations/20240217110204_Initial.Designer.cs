@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace JoltXServer.Migrations
 {
     [DbContext(typeof(UserContext))]
-    [Migration("20240217003604_Initial")]
+    [Migration("20240217110204_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
