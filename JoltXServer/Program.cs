@@ -30,7 +30,8 @@ internal class Program
 
         builder.Services.AddAuthorization();
 
-        builder.Services.AddIdentityApiEndpoints<User>()
+        // TODO - change to true for production
+        builder.Services.AddIdentityApiEndpoints<User>(options => options.SignIn.RequireConfirmedAccount = false)
           .AddRoles<IdentityRole>()
           .AddEntityFrameworkStores<UserContext>();
 
@@ -56,17 +57,19 @@ internal class Program
         // Add default admin account if not exists
         using (var scope = app.Services.CreateScope())
         {
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
 
+            string userName = "admin";
             string email = "admin@admin.com";
             string password = "Password1!";
 
             if (await userManager.FindByEmailAsync(email) == null)
             {
-                var user = new IdentityUser
+                var user = new User
                 {
-                    UserName = email,
-                    Email = email
+                    UserName = userName,
+                    Email = email,
+                    EmailConfirmed = true,
                 };
 
                 await userManager.CreateAsync(user, password);

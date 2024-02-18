@@ -3,6 +3,7 @@
 using Microsoft.AspNetCore.Mvc;
 using JoltXServer.Repositories;
 using JoltXServer.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace JoltXServer.Controllers;
 
@@ -64,6 +65,7 @@ public class SymbolController : ControllerBase
 
 
     [HttpPost("new")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CreateNewSymbol([FromBody] Symbol symbol)
     {
         if(!Symbol.Validate(symbol)) return BadRequest("Symbol is not valid");
