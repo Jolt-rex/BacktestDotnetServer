@@ -29,9 +29,14 @@ internal class Program
         builder.Services.AddAuthorization();
 
         // TODO - change to true for production
-        builder.Services.AddIdentityApiEndpoints<User>(options => options.SignIn.RequireConfirmedAccount = false)
+        builder.Services.AddIdentityApiEndpoints<User>(options => 
+        {
+            options.SignIn.RequireConfirmedAccount = false;
+            options.User.RequireUniqueEmail = true;
+        })
           .AddRoles<IdentityRole>()
           .AddEntityFrameworkStores<UserContext>();
+
 
         var app = builder.Build();
 
@@ -72,10 +77,7 @@ internal class Program
 
                 await userManager.CreateAsync(user, password);
 
-                Console.WriteLine(user.ToString());
-
                 var result = await userManager.AddToRoleAsync(user, "Admin");
-                Console.WriteLine(result.ToString());
             }
         }
 
