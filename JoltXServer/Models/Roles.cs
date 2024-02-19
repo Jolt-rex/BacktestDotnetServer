@@ -1,11 +1,9 @@
-namespace JoltXServer.Models
+namespace JoltXServer.Models;
 
+public static class Roles
 {
-    public static class Roles
+    public static List<string> GetValidRoles()
     {
-        public static List<string> GetValidRoles()
-        {
-            return new List<string>() { "Admin", "User" };
-        }  
-    }
+        return new List<string>() { "Admin", "User" };
+    }  
 }

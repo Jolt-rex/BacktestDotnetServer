@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace JoltXServer.Migrations
 {
-    [DbContext(typeof(UserContext))]
+    [DbContext(typeof(DataAccessLayer.UserContext))]
     [Migration("20240217120139_RolesSeeded")]
     partial class RolesSeeded
     {

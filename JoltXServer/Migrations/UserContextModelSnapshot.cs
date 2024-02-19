@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace JoltXServer.Migrations
 {
-    [DbContext(typeof(UserContext))]
+    [DbContext(typeof(DataAccessLayer.UserContext))]
     partial class UserContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
