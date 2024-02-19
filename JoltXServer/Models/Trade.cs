@@ -4,6 +4,8 @@ namespace JoltXServer.Models;
 public class Trade
 {
     public int Id { get; set; }
+    public int StrategyId { get; set; }
+    public Strategy Strategy { get; set; } = null!;
     public required string Type {get; set; }
     public required string Signal { get; set; }
     public long EntryTime { get; set; }

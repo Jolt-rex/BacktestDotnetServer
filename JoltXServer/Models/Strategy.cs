@@ -4,8 +4,10 @@ namespace JoltXServer.Models;
 public class Strategy
 {
     public int Id { get; set; }
+    public string UserId { get; set; } = null!;
+    public User User { get; set; } = null!;
+    public ICollection<Trade> Trades { get; set; } = [];
 
-    public ICollection<Trade> Trades { get; set; } = new List<Trade>();
     public required string Name { get; set; }
     public string? BuyCondition { get; set; }
     public string? SellCondition { get; set; }

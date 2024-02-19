@@ -200,7 +200,7 @@ public class BinanceService : IExternalAPIService
         else
         {
             //Console.WriteLine($"There are {(currentCandleTime - lastCandleTime) / 60_000} candles to be updated");
-            await AddRequestToQue(Priority.High, symbol, lastCandleTime + MSECONDS_IN_MINUTE, true);
+            AddRequestToQue(Priority.High, symbol, lastCandleTime + MSECONDS_IN_MINUTE, true);
         }
     }
 
@@ -212,7 +212,7 @@ public class BinanceService : IExternalAPIService
         _resetWebsocket = false;
     }
 
-    private async Task AddRequestToQue(Priority priority, string symbol, long startTime, bool isMostRecentCandles)
+    private void AddRequestToQue(Priority priority, string symbol, long startTime, bool isMostRecentCandles)
     {
         ApiRequest request = new(symbol, startTime, isMostRecentCandles);
         //Console.WriteLine($"Adding request to que {request}");
@@ -275,7 +275,7 @@ public class BinanceService : IExternalAPIService
                 {
                     long firstCandleTime = symbol.Value[0] - (_binanceCandleLimitPerRequest * MSECONDS_IN_MINUTE);
                     _queuedSymbols.Add(symbol.Key);
-                    _ = AddRequestToQue(Priority.Low, symbol.Key, firstCandleTime, false);
+                    AddRequestToQue(Priority.Low, symbol.Key, firstCandleTime, false);
                 }
 
                 

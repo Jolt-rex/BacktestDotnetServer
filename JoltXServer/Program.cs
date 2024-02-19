@@ -37,7 +37,6 @@ internal class Program
           .AddRoles<IdentityRole>()
           .AddEntityFrameworkStores<UserContext>();
 
-
         var app = builder.Build();
 
         app.Services.GetService<IExternalAPIService>();
