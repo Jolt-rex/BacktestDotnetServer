@@ -41,6 +41,12 @@ namespace JoltXServer.Migrations
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsPaid")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("LastLogin")
+                        .HasColumnType("bigint");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
 
@@ -55,6 +61,9 @@ namespace JoltXServer.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<long>("PaidUntil")
+                        .HasColumnType("bigint");
+
                     b.Property<string>("PasswordHash")
                         .HasColumnType("nvarchar(max)");
 
@@ -63,6 +72,9 @@ namespace JoltXServer.Migrations
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
+
+                    b.Property<int>("Rank")
+                        .HasColumnType("int");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
@@ -116,14 +128,14 @@ namespace JoltXServer.Migrations
                     b.HasData(
                         new
                         {
-                            Id = "f838ecdb-e5ae-45c5-a294-c01abd42f355",
+                            Id = "93a7b0b3-d950-485f-a355-3539b6c20a99",
                             ConcurrencyStamp = "1",
                             Name = "Admin",
                             NormalizedName = "Admin"
                         },
                         new
                         {
-                            Id = "956536d1-3566-4392-a304-6b55a0378cf7",
+                            Id = "ae15d21c-a955-4be6-b9f2-fabbfe2c9c38",
                             ConcurrencyStamp = "2",
                             Name = "User",
                             NormalizedName = "User"

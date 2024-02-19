@@ -26,8 +26,6 @@ internal class Program
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
         });
 
-        builder.Services.AddAuthentication();
-
         builder.Services.AddAuthorization();
 
         // TODO - change to true for production
@@ -49,7 +47,7 @@ internal class Program
           .MapIdentityApi<User>();
 
         // app.UseHttpsRedirection();
-        app.UseAuthentication();
+
         app.UseAuthorization();
 
         app.MapControllers();
@@ -59,7 +57,7 @@ internal class Program
         {
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
 
-            string userName = "admin";
+            string userName = "admin@admin.com";
             string email = "admin@admin.com";
             string password = "Password1!";
 
@@ -74,7 +72,10 @@ internal class Program
 
                 await userManager.CreateAsync(user, password);
 
-                await userManager.AddToRoleAsync(user, "Admin");
+                Console.WriteLine(user.ToString());
+
+                var result = await userManager.AddToRoleAsync(user, "Admin");
+                Console.WriteLine(result.ToString());
             }
         }
 

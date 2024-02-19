@@ -4,7 +4,8 @@ namespace JoltXServer.Models;
 
 public class User : IdentityUser
 {
-  private bool IsPaid { get; set; }
-  private long LastLogin { get; set; }
-  private long PaidUntil { get; set; }
+  public bool IsPaid { get; set; }
+  public long LastLogin { get; set; }
+  public long PaidUntil { get; set; }
+  public int Rank { get; set; }
 }
