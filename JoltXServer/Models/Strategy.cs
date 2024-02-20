@@ -20,5 +20,6 @@ public class Strategy
     public decimal SharpeRatio { get; set; }
     public int ClosedTrades { get; set; }
     public int OpenTrades { get; set; }
+    public bool Hidden { get; set; }
 
 } 
