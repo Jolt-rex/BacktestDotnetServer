@@ -12,22 +12,22 @@ public class UserContext(DbContextOptions<UserContext> options) : IdentityDbCont
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
-        builder.Entity<User>()
-            .HasMany(e => e.Strategies)
-            .WithOne(e => e.User)
-            .HasForeignKey(e => e.UserId)
-            .HasPrincipalKey(e => e.Id)
-            .OnDelete(DeleteBehavior.Cascade);
+        // builder.Entity<User>()
+        //     .HasMany(e => e.Strategies)
+        //     .WithOne(e => e.User)
+        //     .HasForeignKey(e => e.UserId)
+        //     .HasPrincipalKey(e => e.Id)
+        //     .OnDelete(DeleteBehavior.Cascade);
 
-        builder.Entity<Strategy>()
-            .HasMany(e => e.Trades)
-            .WithOne(e => e.Strategy)
-            .HasForeignKey(e => e.StrategyId)
-            .HasPrincipalKey(e => e.Id)
-            .OnDelete(DeleteBehavior.Cascade);
+        // builder.Entity<Strategy>()
+        //     .HasMany(e => e.Trades)
+        //     .WithOne(e => e.Strategy)
+        //     .HasForeignKey(e => e.StrategyId)
+        //     .HasPrincipalKey(e => e.Id)
+        //     .OnDelete(DeleteBehavior.Cascade);
 
-        base.OnModelCreating(builder);
-        SeedRoles(builder);
+        // base.OnModelCreating(builder);
+        // SeedRoles(builder);
     }
 
     private void SeedRoles(ModelBuilder builder)

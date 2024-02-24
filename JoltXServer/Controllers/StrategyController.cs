@@ -5,34 +5,34 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace JoltXServer.Controllers;
 
 [ApiController]
 [Route("/api/v1/strategies"), Authorize(Roles = "Admin,User")]
-public class StrategyController
+public class StrategyController : ControllerBase
 {
     private readonly UserManager<User> _userManager;
-    private readonly HttpContextAccessor _httpContextAccessor;
+    private readonly StrategyContext _strategyContext;
     
 
-    public StrategyController(HttpContextAccessor httpContextAccessor, UserManager<User> userManager)
+    public StrategyController( UserManager<User> userManager, StrategyContext strategyContext)
     {
         _userManager = userManager;
-
-        _httpContextAccessor = httpContextAccessor;
+        _strategyContext = strategyContext;
     }
 
     [HttpGet("myStrategies")]
-    public async Task<ActionResult> GetUserStrategies()
+    public async Task<IActionResult> GetUserStrategies()
     {
-        var user = _httpContextAccessor.HttpContext?.User;
+        var user = await _userManager.GetUserAsync(User);
         if(user == null) return BadRequest();
 
-        await _userManager.GetUserAsync();
+        Console.WriteLine(user?.Email);
 
-        return Ok("Done");
+
+
+        return Ok();
     }
 
 }
