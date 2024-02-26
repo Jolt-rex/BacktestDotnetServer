@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
+using System.Reflection.Metadata.Ecma335;
+using Microsoft.EntityFrameworkCore;
 
 namespace JoltXServer.Controllers;
 
@@ -36,6 +38,7 @@ public class StrategyController : ControllerBase
     }
 
     [HttpPost("new")]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> CreateNewStrategy([FromBody] Strategy strategy)
     {
         // TODO varify strategy? or is this handled by API
@@ -45,6 +48,46 @@ public class StrategyController : ControllerBase
         if(user == null) return BadRequest();
 
         await _dbContext.Strategies.AddAsync(strategy);
+        var result = await _dbContext.SaveChangesAsync();
+
+        return Ok(result);
+    }
+
+    [HttpPost("runStrategy")]
+    public async Task<IActionResult> RunStrategy(int id, string symbol, string interval, long startTime, long endTime)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if(user == null) return BadRequest();
+        // check strategy has trigger conds set
+        // user has access for interval and time frame
+        // symbol had sufficient data for test
+        var strategy = await _dbContext.Strategies
+            .SingleAsync(s => s.Id == id);
+
+        if(strategy == null) return NotFound();
+
+        if(strategy.UserId != user.Id) return Unauthorized();
+
+        Console.WriteLine(strategy);
+        // run strategy
+        return Ok();
+    }
+
+    
+    [HttpDelete]
+    public async Task<IActionResult> DeleteStrategy(int id)
+    {
+        var user = await _userManager.GetUserAsync(User);
+        if(user == null) return BadRequest();
+
+        var strategy = await _dbContext.Strategies
+            .SingleAsync(s => s.Id == id);
+
+        if(strategy == null) return NotFound();
+
+        if(strategy.UserId != user.Id && !User.IsInRole("Admin")) return Unauthorized();
+
+        _dbContext.Remove(strategy);
         var result = await _dbContext.SaveChangesAsync();
 
         return Ok(result);

@@ -22,4 +22,7 @@ public class Strategy
     public int OpenTrades { get; set; }
     public bool Hidden { get; set; }
 
+    public bool HasRun { get; set; }
+    public bool HasRunThorough { get; set; }
+
 } 
