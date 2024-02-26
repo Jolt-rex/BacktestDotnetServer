@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace JoltXServer.Migrations
 {
-    [DbContext(typeof(UserContext))]
+    [DbContext(typeof(SQLDBContext))]
     [Migration("20240219232218_StrategiesAndTrades")]
     partial class StrategiesAndTrades
     {

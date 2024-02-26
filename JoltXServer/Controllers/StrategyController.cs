@@ -13,13 +13,13 @@ namespace JoltXServer.Controllers;
 public class StrategyController : ControllerBase
 {
     private readonly UserManager<User> _userManager;
-    private readonly StrategyContext _strategyContext;
+    private readonly SQLDBContext _dbContext;
     
 
-    public StrategyController( UserManager<User> userManager, StrategyContext strategyContext)
+    public StrategyController( UserManager<User> userManager, SQLDBContext dbContext)
     {
         _userManager = userManager;
-        _strategyContext = strategyContext;
+        _dbContext = dbContext;
     }
 
     [HttpGet("myStrategies")]
@@ -28,11 +28,25 @@ public class StrategyController : ControllerBase
         var user = await _userManager.GetUserAsync(User);
         if(user == null) return BadRequest();
 
-        Console.WriteLine(user?.Email);
+        var strategies = _dbContext.Strategies
+            .Where(s => s.UserId.Equals(user.Id))
+            .ToList();
 
-
-
-        return Ok();
+        return Ok(strategies);
     }
 
+    [HttpPost("new")]
+    public async Task<IActionResult> CreateNewStrategy([FromBody] Strategy strategy)
+    {
+        // TODO varify strategy? or is this handled by API
+        if(strategy == null) return BadRequest();
+
+        var user = await _userManager.GetUserAsync(User);
+        if(user == null) return BadRequest();
+
+        await _dbContext.Strategies.AddAsync(strategy);
+        var result = await _dbContext.SaveChangesAsync();
+
+        return Ok(result);
+    }
 }

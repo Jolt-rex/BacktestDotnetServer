@@ -21,7 +21,7 @@ internal class Program
         builder.Services.AddSingleton<IExternalAPIService, BinanceService>();
         builder.Services.AddEndpointsApiExplorer();
 
-        builder.Services.AddDbContext<UserContext>(options =>
+        builder.Services.AddDbContext<SQLDBContext>(options =>
         {
             options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
         });
@@ -35,7 +35,7 @@ internal class Program
             options.User.RequireUniqueEmail = true;
         })
           .AddRoles<IdentityRole>()
-          .AddEntityFrameworkStores<UserContext>();
+          .AddEntityFrameworkStores<SQLDBContext>();
 
         var app = builder.Build();
 

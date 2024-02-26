@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace JoltXServer.Migrations
 {
-    [DbContext(typeof(DataAccessLayer.UserContext))]
+    [DbContext(typeof(DataAccessLayer.SQLDBContext))]
     [Migration("20240219005455_UserDetailsExpanded")]
     partial class UserDetailsExpanded
     {
